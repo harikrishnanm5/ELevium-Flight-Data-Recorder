@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO // FLOW • Telemetry Data Flow Architecture (Normal ➔ SD Card | Danger ➔ FRAM)</title>
+  <meta name="description" content="Interactive dual-bus telemetry data router visualizer. Real-time normal flight sensor data flows to high-capacity MicroSD card, while critical danger incidents divert to zero-latency non-volatile FRAM.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="anime.min.js"></script>
+  <link rel="stylesheet" href="flow.css">
+</head>
+<body class="aero-flow-body">
+  <!-- Ambient Space Holographic Layers -->
+  <div class="flow-bg-grid"></div>
+  <div class="crt-scanlines"></div>
+  <div class="flow-ambient-glow glow-cyan"></div>
+  <div class="flow-ambient-glow glow-crimson"></div>
+  <div class="flow-ambient-glow glow-purple"></div>
+
+  <!-- TOP HUD COMMAND BAR -->
+  <header class="flow-hud-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <div class="holo-quantum-core">
+          <div class="core-ring r1"></div>
+          <div class="core-ring r2"></div>
+          <div class="core-center"></div>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-text">AERO<span class="accent-cyan">FLOW</span></span>
+          <span class="hub-tag">MODULE 12 // DUAL-BUS DATA ROUTER</span>
+        </div>
+        <a href="index.html" class="back-home-badge" title="Return to Frontpage / Hardware Casing">
+          ← Frontpage
+        </a>
+      </div>
+
+      <!-- Mission Elapsed Clock -->
+      <div class="mission-clock-pill">
+        <span class="clock-label">MET:</span>
+        <span class="clock-val" id="flow-clock">00:19:44.2</span>
+      </div>
+    </div>
+
+    <!-- MASTER NAVIGATION TABS -->
+    <nav class="flow-nav-tabs">
+      <a href="dashboard.html" class="flow-nav-tab" title="3D Drone Holo-Deck Telemetry Cockpit">
+        <span class="tab-icon">🛰️</span>
+        <span class="tab-label">3D Holo-Deck</span>
+      </a>
+
+      <a href="flow.html" class="flow-nav-tab active" title="Interactive Dual-Bus Telemetry Flow (SD Card vs FRAM)">
+        <span class="tab-icon">⚡</span>
+        <span class="tab-label">Data Flow Router</span>
+        <span class="tab-badge-split">
+          <span class="badge-sd">Normal ➔ SD</span>
+          <span class="badge-divider">|</span>
+          <span class="badge-fram">Danger ➔ FRAM</span>
+        </span>
+      </a>
+
+      <a href="dashboard.html#logger" class="flow-nav-tab" title="BlackBox Dual-Storage Incident Vault">
+        <span class="tab-icon">💾</span>
+        <span class="tab-label">BlackBox Logger</span>
+        <span class="tab-pill-alert">SD &amp; FRAM</span>
+      </a>
+
+      <a href="index.html#stage-chassis" class="flow-nav-tab" title="Exploded 3D Hardware Casing">
+        <span class="tab-icon">🧩</span>
+        <span class="tab-label">Hardware Casing</span>
+      </a>
+    </nav>
+
+    <!-- RIGHT CONTROLS -->
+    <div class="header-right">
+      <div class="routing-arbiter-status" id="arbiter-status-indicator">
+        <span class="status-pulse-dot"></span>
+        <span class="status-txt">DMA ARBITER ACTIVE</span>
+      </div>
+
+      <!-- Audio Alert Toggle -->
+      <button class="btn-icon-hud" id="btn-flow-audio" title="Toggle Synthesized Sci-Fi Audio (Key: M)">
+        <span id="flow-audio-icon">🔊</span>
+      </button>
+
+      <!-- Quick Reset Statistics -->
+      <button class="btn-icon-hud" id="btn-flow-reset" title="Reset Flow Statistics & Counters">
+        <span>🔄</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flow-main-container">
+
+    <!-- HERO HEADER & LOGIC CRITERIA STRIP -->
+    <section class="flow-hero-banner">
+      <div class="banner-content">
+        <div class="banner-tags">
+          <span class="tag-cyber">AVIONICS DMA ARBITER</span>
+          <span class="tag-rule-sd"><span class="mini-dot green"></span> NORMAL ➔ MICRO-SD CARD</span>
+          <span class="tag-rule-fram"><span class="mini-dot red"></span> DANGER ➔ FERROELECTRIC FRAM</span>
+        </div>
+        <h1 class="banner-title">Real-Time Telemetry Data Flow &amp; Routing Engine</h1>
+        <p class="banner-description">
+          Sensors stream multi-channel telemetry into the central Flight MCU. The dynamic hardware routing arbiter inspects incoming packets: 
+          <strong>Normal telemetry packets</strong> (stable G-force, nominal temperatures, valid link) flow along the high-bandwidth bus into the 
+          <strong>SD Card Block</strong>. When a <strong>Danger incident</strong> occurs (impact shock &gt;3.5G, ESC thermal runaway &gt;80°C, voltage sag &lt;13.5V), 
+          the arbiter instantly diverts the packet via zero-latency DMA into the crash-survivable <strong>FRAM Block</strong> in under 150 nanoseconds.
+        </p>
+      </div>
+
+      <!-- Quick Metrics Ribbon -->
+      <div class="banner-kpis">
+        <div class="kpi-card total">
+          <span class="kpi-label">TOTAL PACKETS</span>
+          <span class="kpi-val" id="kpi-total-packets">0</span>
+          <span class="kpi-sub">Continuous stream</span>
+        </div>
+        <div class="kpi-card sd">
+          <div class="kpi-header-row">
+            <span class="kpi-label">NORMAL ➔ SD CARD</span>
+            <span class="kpi-icon">💾</span>
+          </div>
+          <span class="kpi-val cyan" id="kpi-sd-packets">0</span>
+          <span class="kpi-sub" id="kpi-sd-pct">100% of stream</span>
+        </div>
+        <div class="kpi-card fram">
+          <div class="kpi-header-row">
+            <span class="kpi-label">DANGER ➔ FRAM</span>
+            <span class="kpi-icon">⚡</span>
+          </div>
+          <span class="kpi-val crimson" id="kpi-fram-packets">0</span>
+          <span class="kpi-sub" id="kpi-fram-pct">0% emergency snapshots</span>
+        </div>
+        <div class="kpi-card speed">
+          <span class="kpi-label">ARBITER LATENCY</span>
+          <span class="kpi-val amber">&lt; 150 ns</span>
+          <span class="kpi-sub">DMA Hardware Latch</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE CONTROL DECK -->
+    <section class="flow-controls-deck">
+      <!-- Group 1: Manual Packet Dispatchers -->
+      <div class="ctrl-group dispatch-group">
+        <span class="ctrl-group-title">MANUAL PACKET INJECTION</span>
+        <div class="btn-dispatch-row">
+          <button class="btn-dispatch normal" id="btn-dispatch-normal" title="Dispatch Normal Flight Data Packet (Shortcut: N)">
+            <span class="btn-glow-ring"></span>
+            <span class="btn-icon">🟢</span>
+            <div class="btn-txt-col">
+              <span class="btn-main-txt">Send Normal Data Packet</span>
+              <span class="btn-sub-txt">Routes to SD Card (FAT32) [Key: N]</span>
+            </div>
+          </button>
+
+          <button class="btn-dispatch danger" id="btn-dispatch-danger" title="Trigger Critical Danger Incident (Shortcut: D)">
+            <span class="btn-glow-ring red"></span>
+            <span class="btn-icon">🚨</span>
+            <div class="btn-txt-col">
+              <span class="btn-main-txt">Trigger Danger Incident</span>
+              <span class="btn-sub-txt">Diverts to FRAM (150ns) [Key: D]</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Danger Scenario Quick-Select Dropdown -->
+        <div class="scenario-selector-wrap">
+          <span class="scenario-lbl">DANGER TYPE:</span>
+          <select id="select-danger-scenario" class="flow-select">
+            <option value="high_g">💥 High-G Impact Shock (7.82 G)</option>
+            <option value="esc_thermal">🔥 Motor ESC Thermal Runaway (94.2°C)</option>
+            <option value="volt_sag">⚡ Critical Battery Voltage Sag (11.2 V)</option>
+            <option value="gps_denied">📡 Complete GNSS Satellite Signal Loss</option>
+            <option value="rotor_stall">🌪️ Aerodynamic Stall / Gyro Tumbling</option>
+            <option value="geofence_breach">🌐 Emergency Geofence Perimeter Breach</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Group 2: Continuous Autonomous Stream Generator -->
+      <div class="ctrl-group stream-group">
+        <span class="ctrl-group-title">AUTONOMOUS STREAM SIMULATOR</span>
+        <div class="stream-controls-row">
+          <button class="btn-stream-toggle running" id="btn-toggle-stream" title="Start / Pause Continuous Telemetry Flow (Shortcut: Space)">
+            <span class="stream-state-icon" id="stream-btn-icon">⏸</span>
+            <span id="stream-btn-text">Streaming Active</span>
+          </button>
+
+          <!-- Rate Buttons -->
+          <div class="stream-rate-selector">
+            <span class="rate-lbl">RATE:</span>
+            <div class="mini-btn-group">
+              <button class="rate-btn" data-rate="1">1 Hz</button>
+              <button class="rate-btn active" data-rate="2">2 Hz</button>
+              <button class="rate-btn" data-rate="5">5 Hz</button>
+              <button class="rate-btn" data-rate="10">10 Hz</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sliders: Danger Probability & Animation Speed -->
+        <div class="stream-sliders-grid">
+          <div class="slider-item">
+            <div class="slider-header">
+              <span>DANGER PROBABILITY:</span>
+              <span class="slider-badge" id="val-danger-prob">20%</span>
+            </div>
+            <input type="range" id="slider-danger-prob" min="0" max="100" value="20" step="5" class="flow-range">
+            <div class="slider-ticks">
+              <span>0% (All Normal)</span>
+              <span>20% (Realistic)</span>
+              <span>100% (All Danger)</span>
+            </div>
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-header">
+              <span>PACKET FLOW SPEED:</span>
+              <span class="slider-badge" id="val-flow-speed">1.0x</span>
+            </div>
+            <input type="range" id="slider-flow-speed" min="0.4" max="2.5" value="1.0" step="0.1" class="flow-range">
+            <div class="slider-ticks">
+              <span>0.4x (Slow-Mo)</span>
+              <span>1.0x (Nominal)</span>
+              <span>2.5x (Hyper)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 3: Custom Packet Injector & Lab -->
+      <div class="ctrl-group custom-builder-group">
+        <span class="ctrl-group-title">INTERACTIVE PACKET BUILDER</span>
+        <div class="custom-builder-compact">
+          <div class="custom-status-toggle">
+            <span class="status-toggle-lbl">STATUS FLAG:</span>
+            <div class="toggle-switch-pills">
+              <button class="pill-btn active-normal" id="btn-custom-normal">NORMAL</button>
+              <button class="pill-btn" id="btn-custom-danger">DANGER</button>
+            </div>
+          </div>
+
+          <div class="custom-fields-row">
+            <div class="custom-input-box">
+              <label for="custom-gforce">G-FORCE:</label>
+              <input type="number" id="custom-gforce" value="1.04" step="0.1" min="0.5" max="15.0">
+            </div>
+            <div class="custom-input-box">
+              <label for="custom-temp">ESC TEMP:</label>
+              <input type="number" id="custom-temp" value="42.5" step="0.5" min="20" max="130">
+            </div>
+            <div class="custom-input-box">
+              <label for="custom-volt">VOLTAGE:</label>
+              <input type="number" id="custom-volt" value="15.8" step="0.1" min="10" max="17">
+            </div>
+          </div>
+
+          <div class="custom-note-row">
+            <input type="text" id="custom-note" placeholder="Custom telemetry payload note (e.g., Routine Waypoint Pass)" value="Telemetry Nominal Cruise">
+            <button class="btn-custom-inject" id="btn-inject-custom" title="Inject this packet into the live flow">
+              <span>🚀 Inject Packet</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         THE CORE VISUALIZATION STAGE: TWO BLOCKS & DATA FLOW CONDUIT
+         ===================================================================== -->
+    <section class="flow-stage-wrapper">
+      <div class="stage-container">
+        
+        <!-- CENTRAL TOP UNIT: FLIGHT MCU & SENSOR INGESTION HUB -->
+        <div class="origin-mcu-card" id="origin-mcu-unit">
+          <div class="card-beam-glow"></div>
+          <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+          <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+          <div class="mcu-header-strip">
+            <div class="mcu-chip-badge">
+              <div class="mcu-led-pulse"></div>
+              <span class="chip-title">STM32H753 • FLIGHT SENSOR HUB &amp; ARBITER</span>
+            </div>
+            <div class="mcu-stats-strip">
+              <span>SAMPLING: <strong>1,000 Hz</strong></span>
+              <span class="divider">|</span>
+              <span>DMA STREAM: <strong>CIRCULAR BUFFER</strong></span>
+              <span class="divider">|</span>
+              <span>BUS CLOCK: <strong>480 MHz</strong></span>
+            </div>
+          </div>
+
+          <div class="mcu-body-grid">
+            <!-- Left: Current Telemetry Sensor Reads -->
+            <div class="mcu-sensors-col">
+              <span class="col-title">REAL-TIME SENSOR STREAM</span>
+              <div class="sensor-readings-list">
+                <div class="s-read-item" id="sensor-imu">
+                  <span class="s-name">IMU (ICM-42688P)</span>
+                  <span class="s-val" id="val-imu">Pitch: +0.2° | Roll: -0.1°</span>
+                </div>
+                <div class="s-read-item" id="sensor-g">
+                  <span class="s-name">G-FORCE ACCEL</span>
+                  <span class="s-val cyan" id="val-gforce">1.02 G (Nominal)</span>
+                </div>
+                <div class="s-read-item" id="sensor-esc">
+                  <span class="s-name">ESC THERMAL FLIR</span>
+                  <span class="s-val" id="val-esc">42.4°C (Normal)</span>
+                </div>
+                <div class="s-read-item" id="sensor-power">
+                  <span class="s-name">SOLID-STATE 4S</span>
+                  <span class="s-val" id="val-power">15.84 V | 24.2 A</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Center: Active Packet Serializer & Decision Gate -->
+            <div class="mcu-decision-center">
+              <span class="col-title">ACTIVE SERIALIZED PACKET</span>
+              <div class="current-packet-preview" id="current-packet-display">
+                <div class="pkt-header-line">
+                  <span class="pkt-id-tag" id="disp-pkt-id">PKT #0001</span>
+                  <span class="pkt-timestamp" id="disp-pkt-time">MET 00:00.00</span>
+                  <span class="pkt-status-badge normal" id="disp-pkt-badge">STATUS: NORMAL</span>
+                </div>
+                <div class="pkt-payload-line" id="disp-pkt-payload">
+                  [G: 1.02G | ESC: 42.4°C | 15.84V | Alt: 24.5m]
+                </div>
+                <div class="pkt-route-line" id="disp-pkt-route">
+                  ➔ ARBITER RULE: STATUS IS NORMAL ➔ ROUTE TO SD CARD
+                </div>
+              </div>
+
+              <!-- Animated Gate Indicator -->
+              <div class="decision-gate-indicator" id="decision-gate-graphic">
+                <div class="gate-path sd-path active" id="gate-path-sd">
+                  <span class="gate-arrow">↙</span>
+                  <span class="gate-label">BUS 0: SD CARD</span>
+                </div>
+                <div class="gate-core">
+                  <span class="gate-icon">⮀</span>
+                  <span class="gate-txt">DEMUX</span>
+                </div>
+                <div class="gate-path fram-path" id="gate-path-fram">
+                  <span class="gate-label">BUS 1: FRAM</span>
+                  <span class="gate-arrow">↘</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Decision Rules Engine -->
+            <div class="mcu-rules-col">
+              <span class="col-title">ARBITER ROUTING LOGIC</span>
+              <div class="rule-box rule-sd-box">
+                <div class="rule-title-row">
+                  <span class="rule-bullet green">●</span>
+                  <strong>NORMAL ➔ SD CARD</strong>
+                </div>
+                <p class="rule-desc">
+                  Condition: G-Force &le; 3.5G &amp; ESC Temp &le; 80°C &amp; Voltage &ge; 13.5V. Route high-throughput streaming frames to MicroSD FAT32.
+                </p>
+              </div>
+
+              <div class="rule-box rule-fram-box">
+                <div class="rule-title-row">
+                  <span class="rule-bullet red">●</span>
+                  <strong>DANGER ➔ FRAM</strong>
+                </div>
+                <p class="rule-desc">
+                  Condition: G-Force &gt; 3.5G OR Temp &gt; 80°C OR Volt &lt; 13.5V OR Failsafe. Trigger 150ns DMA interrupt to freeze snapshot into FRAM.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             INTERACTIVE FLOW CANVAS & DUAL BUS CONDUIT AREA
+             =================================================================== -->
+        <div class="flow-conduit-workspace">
+          <!-- Background SVG Schematic Wiring Lines -->
+          <svg class="schematic-traces-svg" id="flow-schematic-svg" viewBox="0 0 1200 320" preserveAspectRatio="none">
+            <defs>
+              <!-- Normal SD Line Gradient -->
+              <linearGradient id="grad-sd-bus" x1="50%" y1="0%" x2="10%" y2="100%">
+                <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.8"/>
+                <stop offset="50%" stop-color="#10b981" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#00f0ff" stop-opacity="0.9"/>
+              </linearGradient>
+
+              <!-- Danger FRAM Line Gradient -->
+              <linearGradient id="grad-fram-bus" x1="50%" y1="0%" x2="90%" y2="100%">
+                <stop offset="0%" stop-color="#ff0055" stop-opacity="0.9"/>
+                <stop offset="50%" stop-color="#f59e0b" stop-opacity="0.9"/>
+                <stop offset="100%" stop-color="#ef4444" stop-opacity="0.9"/>
+              </linearGradient>
+
+              <!-- Filter for glow -->
+              <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- SD Card Conduit Track (Left Branch) -->
+            <path id="path-bus-sd" class="bus-pipe-track sd-track" d="M 600,20 C 600,100 250,90 220,300" />
+            <path class="bus-pipe-glow sd-track-glow" d="M 600,20 C 600,100 250,90 220,300" filter="url(#glow-filter)" />
+
+            <!-- FRAM Conduit Track (Right Branch) -->
+            <path id="path-bus-fram" class="bus-pipe-track fram-track" d="M 600,20 C 600,100 950,90 980,300" />
+            <path class="bus-pipe-glow fram-track-glow" d="M 600,20 C 600,100 950,90 980,300" filter="url(#glow-filter)" />
+
+            <!-- Junction Pulse Hub -->
+            <circle cx="600" cy="20" r="10" class="junction-hub-circle" />
+            <circle cx="600" cy="20" r="18" class="junction-hub-ring" />
+          </svg>
+
+          <!-- Interactive High-FPS Particle Canvas (Rendered by flow.js) -->
+          <canvas id="flow-particle-canvas" class="particle-canvas" width="1200" height="320"></canvas>
+
+          <!-- Floating Waypoint Labels -->
+          <div class="conduit-label-tag sd-conduit-tag">
+            <span class="c-tag-pill green">SPI / SDIO BUS 0</span>
+            <span class="c-tag-sub">Continuous 1000Hz Normal Stream</span>
+          </div>
+
+          <div class="conduit-label-tag fram-conduit-tag">
+            <span class="c-tag-pill red">HIGH-PRIORITY DMA BUS 1</span>
+            <span class="c-tag-sub">150ns Instant Freeze Hazard Bus</span>
+          </div>
+        </div>
+
+        <!-- ===================================================================
+             THE TWO BLOCKS: SD CARD BLOCK vs FRAM BLOCK
+             =================================================================== -->
+        <div class="two-storage-blocks-grid">
+
+          <!-- =================================================================
+               BLOCK 1: MICRO-SD CARD STORAGE (NORMAL FLIGHT DATA)
+               ================================================================= -->
+          <div class="storage-block-unit block-sd" id="block-sd-unit">
+            <div class="block-beam-glow"></div>
+            <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+            <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+            <!-- Block Header -->
+            <div class="block-header">
+              <div class="block-title-group">
+                <div class="block-avatar sd-avatar">
+                  <span class="avatar-icon">💾</span>
+                  <div class="avatar-led" id="sd-activity-led" title="SD Card Write Activity LED"></div>
+                </div>
+                <div>
+                  <div class="block-sub-tag">PRIMARY DATA DESTINATION</div>
+                  <h2 class="block-main-title">MicroSD Card Block <span class="dest-badge normal">NORMAL DATA</span></h2>
+                </div>
+              </div>
+              <div class="block-status-pill online" id="sd-status-pill">
+                <span class="dot-live"></span>
+                <span>MOUNTED (FAT32)</span>
+              </div>
+            </div>
+
+            <!-- Block Body Content -->
+            <div class="block-body">
+              
+              <!-- Realistic Graphic of SD Card -->
+              <div class="physical-device-card sd-card-graphic">
+                <div class="sd-card-shape">
+                  <div class="sd-notch"></div>
+                  <div class="sd-pins-row">
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                    <span class="sd-pin"></span>
+                  </div>
+                  <div class="sd-brand-text">AERO TACTICAL // UHS-II</div>
+                  <div class="sd-capacity-badge">64 GB</div>
+                  <div class="sd-write-flash-overlay" id="sd-flash-overlay"></div>
+                </div>
+
+                <div class="device-spec-info">
+                  <div class="spec-row">
+                    <span class="sk">BUS PROTOCOL:</span>
+                    <span class="sv cyan">4-Bit SDIO @ 480 MB/s</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">WRITE LATENCY:</span>
+                    <span class="sv">~ 2.4 ms (Buffered DMA)</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">FILE FORMAT:</span>
+                    <span class="sv">Binary Log (.BIN) / FAT32</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">PURPOSE:</span>
+                    <span class="sv emerald">Full Telemetry Flight Archive</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Storage Matrix: Dynamic Cluster Blocks -->
+              <div class="storage-allocation-section">
+                <div class="matrix-header">
+                  <span class="m-title">FAT32 ALLOCATION CLUSTERS (64 SECTORS)</span>
+                  <span class="m-val" id="sd-cluster-pct">15.8 GB / 64 GB (24.7%)</span>
+                </div>
+                <div class="clusters-grid" id="sd-clusters-grid">
+                  <!-- 64 dynamic memory blocks populated in JS -->
+                </div>
+                <div class="matrix-progress-track">
+                  <div class="matrix-fill-bar" id="sd-progress-fill" style="width: 24.7%;"></div>
+                </div>
+              </div>
+
+              <!-- Live Metrics Counter -->
+              <div class="block-metrics-trio">
+                <div class="metric-pod">
+                  <span class="pod-lbl">NORMAL PACKETS LOGGED</span>
+                  <span class="pod-val cyan" id="sd-counter-packets">0</span>
+                </div>
+                <div class="metric-pod">
+                  <span class="pod-lbl">ACTIVE FLIGHT LOG</span>
+                  <span class="pod-val" id="sd-active-file">FLIGHT_0042.BIN</span>
+                </div>
+                <div class="metric-pod">
+                  <span class="pod-lbl">BUFFER HEALTH</span>
+                  <span class="pod-val emerald">100% OK</span>
+                </div>
+              </div>
+
+              <!-- Live Write Stream Feed Terminal -->
+              <div class="block-terminal-feed">
+                <div class="terminal-bar">
+                  <span class="t-tag">SD CARD WRITE STREAM // DMA FIFO</span>
+                  <span class="t-status">CONTINUOUS INGEST</span>
+                </div>
+                <div class="terminal-scroller" id="sd-terminal-scroller">
+                  <div class="t-line dim">[SYS] MicroSD initialized. FAT32 64GB mounted successfully.</div>
+                  <div class="t-line dim">[SYS] Opened file /LOGS/FLIGHT_0042.BIN for appending.</div>
+                  <div class="t-line normal">[INIT] Awaiting incoming normal telemetry packets...</div>
+                </div>
+              </div>
+
+              <!-- Footer CTA -->
+              <div class="block-footer-action">
+                <a href="dashboard.html#logger" class="btn-block-explore sd-link">
+                  <span>Browse All 18 Normal SD Logs in BlackBox Logger →</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- =================================================================
+               BLOCK 2: FERROELECTRIC FRAM STORAGE (DANGER FLIGHT DATA)
+               ================================================================= -->
+          <div class="storage-block-unit block-fram" id="block-fram-unit">
+            <div class="block-beam-glow crimson"></div>
+            <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+            <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+            <!-- Block Header -->
+            <div class="block-header">
+              <div class="block-title-group">
+                <div class="block-avatar fram-avatar">
+                  <span class="avatar-icon">⚡</span>
+                  <div class="avatar-led red" id="fram-activity-led" title="FRAM Emergency Latch Strobe"></div>
+                </div>
+                <div>
+                  <div class="block-sub-tag hazard">EMERGENCY VAULT DESTINATION</div>
+                  <h2 class="block-main-title">Ferroelectric FRAM Block <span class="dest-badge danger">DANGER DATA</span></h2>
+                </div>
+              </div>
+              <div class="block-status-pill armed" id="fram-status-pill">
+                <span class="dot-armed"></span>
+                <span>ARMED (ZERO-LATENCY)</span>
+              </div>
+            </div>
+
+            <!-- Block Body Content -->
+            <div class="block-body">
+
+              <!-- Realistic Graphic of FRAM Integrated Circuit -->
+              <div class="physical-device-card fram-card-graphic">
+                <div class="fram-chip-shape">
+                  <div class="ic-notch"></div>
+                  <div class="ic-pins-col left">
+                    <span class="ic-pin"></span><span class="ic-pin"></span><span class="ic-pin"></span><span class="ic-pin"></span>
+                  </div>
+                  <div class="ic-pins-col right">
+                    <span class="ic-pin"></span><span class="ic-pin"></span><span class="ic-pin"></span><span class="ic-pin"></span>
+                  </div>
+                  <div class="ic-markings">
+                    <div class="ic-code">CY15B108QI</div>
+                    <div class="ic-sub">8Mb NV-FRAM</div>
+                    <div class="ic-speed">150ns BURST</div>
+                  </div>
+                  <div class="fram-strobe-overlay" id="fram-strobe-overlay"></div>
+                </div>
+
+                <div class="device-spec-info">
+                  <div class="spec-row">
+                    <span class="sk">WRITE SPEED:</span>
+                    <span class="sv amber">150 ns (Instant Quantum)</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">CRASH SURVIVABILITY:</span>
+                    <span class="sv purple">50,000 G Shock Rating</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">POWER-CUT SURVIVAL:</span>
+                    <span class="sv emerald">100% Zero-Loss Immune</span>
+                  </div>
+                  <div class="spec-row">
+                    <span class="sk">PURPOSE:</span>
+                    <span class="sv crimson">Accident &amp; Hazard Snapshots</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ferroelectric Quantum Dipole State Matrix -->
+              <div class="storage-allocation-section fram-section">
+                <div class="matrix-header">
+                  <span class="m-title">FERROELECTRIC NON-VOLATILE CELLS</span>
+                  <span class="m-val" id="fram-usage-val">384 KB / 8,192 KB (4.7%)</span>
+                </div>
+                <div class="clusters-grid fram-grid" id="fram-clusters-grid">
+                  <!-- 64 dynamic ferroelectric dipole cells in JS -->
+                </div>
+                <div class="matrix-progress-track fram-track">
+                  <div class="matrix-fill-bar fram-bar" id="fram-progress-fill" style="width: 4.7%;"></div>
+                </div>
+              </div>
+
+              <!-- Live Metrics Counter -->
+              <div class="block-metrics-trio">
+                <div class="metric-pod">
+                  <span class="pod-lbl">DANGER SNAPSHOTS FROZEN</span>
+                  <span class="pod-val crimson" id="fram-counter-packets">0</span>
+                </div>
+                <div class="metric-pod">
+                  <span class="pod-lbl">LAST HAZARD TRIGGER</span>
+                  <span class="pod-val amber" id="fram-last-trigger">STANDBY NOMINAL</span>
+                </div>
+                <div class="metric-pod">
+                  <span class="pod-lbl">LATCH INTEGRITY</span>
+                  <span class="pod-val emerald">100% SECURE</span>
+                </div>
+              </div>
+
+              <!-- Emergency Incident Vault Terminal -->
+              <div class="block-terminal-feed fram-feed">
+                <div class="terminal-bar fram-bar">
+                  <span class="t-tag">FRAM NON-VOLATILE REGISTERS // HARDWARE FREEZE</span>
+                  <span class="t-status danger-pulse">HAZARD MONITORING</span>
+                </div>
+                <div class="terminal-scroller fram-scroller" id="fram-terminal-scroller">
+                  <div class="t-line dim">[SYS] Non-volatile FRAM armed. 8MB registers mapped at 0x00A000.</div>
+                  <div class="t-line dim">[SYS] Failsafe interrupt active. Ready for instant emergency freeze.</div>
+                  <div class="t-line amber">[STANDBY] Waiting for danger telemetry events...</div>
+                </div>
+              </div>
+
+              <!-- Footer CTA -->
+              <div class="block-footer-action">
+                <a href="dashboard.html#logger" class="btn-block-explore fram-link">
+                  <span>Inspect All 6 Stamped Danger Events in Logger →</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SECTION: UNIFIED LIVE PACKET ROUTING STREAM TABLE & AUDIT LOG
+         ===================================================================== -->
+    <section class="flow-audit-section">
+      <div class="audit-header-bar">
+        <div class="audit-title-wrap">
+          <span class="audit-icon">📋</span>
+          <div>
+            <span class="audit-sub">CHRONOLOGICAL DISPATCH AUDIT</span>
+            <h3 class="audit-title">Live Ingested Telemetry Packet Stream</h3>
+          </div>
+        </div>
+
+        <div class="audit-controls">
+          <!-- Filters -->
+          <div class="audit-filter-pills">
+            <button class="audit-filter-btn active" data-audit-filter="all">All Packets (<span id="audit-count-all">0</span>)</button>
+            <button class="audit-filter-btn" data-audit-filter="normal">Normal ➔ SD (<span id="audit-count-normal">0</span>)</button>
+            <button class="audit-filter-btn" data-audit-filter="danger">Danger ➔ FRAM (<span id="audit-count-danger">0</span>)</button>
+          </div>
+
+          <!-- Clear Button -->
+          <button class="btn-clear-audit" id="btn-clear-audit-log" title="Clear Ingestion Audit Log">
+            <span>🗑️ Clear Audit</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="audit-table-wrapper">
+        <table class="flow-audit-table" id="flow-audit-table">
+          <thead>
+            <tr>
+              <th># PKT ID</th>
+              <th>MET (Time)</th>
+              <th>Status Flag</th>
+              <th>Destination Block</th>
+              <th>Telemetry Snapshot</th>
+              <th>Bus Protocol</th>
+              <th>Write Latency</th>
+              <th>Routing Reason / Trigger</th>
+            </tr>
+          </thead>
+          <tbody id="flow-audit-tbody">
+            <!-- Dynamically populated rows -->
+            <tr class="audit-empty-row" id="audit-empty-row">
+              <td colspan="8">No packets dispatched yet. Click "Send Normal Data Packet" or "Trigger Danger Incident" above!</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- POPUP TOAST NOTIFICATION -->
+  <div class="flow-toast-container" id="flow-toast-container"></div>
+
+  <!-- SCRIPT -->
+  <script src="flow.js"></script>
+</body>
+</html>

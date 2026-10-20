@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO // LOGGER • Next-Gen Flight Data Acquisition &amp; Blackbox Motion Architecture</title>
+  <meta name="description" content="Next-generation tactical flight data logger with Igloo-style 3D scroll animation, high-G crash-survivable telemetry recording, and interactive avionics breakdown.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Anime.js for High-Precision Motion Graphics -->
+  <script src="anime.min.js"></script>
+  <!-- Three.js for 3D Exploded Box Model & Sensors -->
+  <script src="three.min.js"></script>
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body class="aero-landing">
+  <!-- Background Atmosphere -->
+  <div class="space-grid-bg"></div>
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-magenta"></div>
+  <div class="crt-scanlines"></div>
+
+  <!-- FIXED FLOATING SCROLL PROGRESS HUD (RIGHT SIDE) -->
+  <aside class="scroll-hud" id="scroll-hud">
+    <div class="hud-scroll-track">
+      <div class="hud-scroll-fill" id="hud-scroll-fill"></div>
+    </div>
+    <div class="hud-stages-list">
+      <a href="#hero-stage" class="stage-dot active" data-stage="0" title="Hero: Logger Core">
+        <span class="dot-num">00</span>
+        <span class="dot-label">LOGGER CORE</span>
+      </a>
+      <a href="#stage-chassis" class="stage-dot" data-stage="1" title="Stage 01: Chassis &amp; Structure">
+        <span class="dot-num">01</span>
+        <span class="dot-label">CHASSIS 3D</span>
+      </a>
+      <a href="#stage-sensors" class="stage-dot" data-stage="2" title="Stage 02: Sensor Pipelines">
+        <span class="dot-num">02</span>
+        <span class="dot-label">SENSOR STAGE</span>
+      </a>
+      <a href="#stage-memory" class="stage-dot" data-stage="3" title="Stage 03: BlackBox Storage">
+        <span class="dot-num">03</span>
+        <span class="dot-label">MEMORY BUS</span>
+      </a>
+      <a href="#stage-cockpit" class="stage-dot" data-stage="4" title="Stage 04: Cockpit Bridge">
+        <span class="dot-num">04</span>
+        <span class="dot-label">LIVE COCKPIT</span>
+      </a>
+    </div>
+    <div class="hud-scroll-pct" id="hud-scroll-pct">0%</div>
+  </aside>
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="landing-header">
+    <div class="header-container">
+      <a href="index.html" class="brand-link">
+        <div class="brand-core-icon">
+          <div class="icon-ring ring-1"></div>
+          <div class="icon-ring ring-2"></div>
+          <div class="icon-center"></div>
+        </div>
+        <div class="brand-text-block">
+          <span class="brand-name">AERO<span class="accent-cyan">LOGGER</span></span>
+          <span class="brand-sub">TACTICAL FLIGHT DATA ACQUISITION // V6.2</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#hero-stage" class="nav-item">Logger Unit</a>
+        <a href="#stage-chassis" class="nav-item">Chassis 3D</a>
+        <a href="#stage-sensors" class="nav-item">Sensors</a>
+        <a href="#stage-memory" class="nav-item">Storage</a>
+        <a href="flow.html" class="nav-item nav-item-flow" title="Interactive Dual-Bus Telemetry Data Flow (Normal ➔ SD | Danger ➔ FRAM)">
+          <span class="icon-flow">⚡</span> Data Flow Router <span class="nav-badge-pill">SD &amp; FRAM Flow</span>
+        </a>
+        <a href="dashboard.html#logger" class="nav-item nav-item-logger" title="Open Dual-Bus BlackBox Logger (SD Card &amp; FRAM)">
+          <span class="icon-save">💾</span> BlackBox Logger <span class="nav-badge-pill">SD &amp; FRAM ⚠️</span>
+        </a>
+      </nav>
+
+      <div class="header-actions">
+        <!-- Direct Bridge Link to the 3D Telemetry Dashboard Subpage -->
+        <a href="dashboard.html" class="btn-subpage-launch" title="Switch to Full 3D Drone Telemetry Dashboard">
+          <span class="btn-pulse-dot"></span>
+          <span class="btn-txt">Launch Live Holo-Deck</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       IGLOO-STYLE SCROLL ANIMATION SYSTEM
+       Full-viewport sticky 3D canvas pinned while scrolling drives the journey
+       ========================================================================= -->
+  <div class="scrolly-journey-container" id="scrolly-journey">
+
+    <!-- PINNED 3D WEBGL HERO CANVAS (STICKY VIEWPORT) -->
+    <div class="sticky-3d-canvas-wrap" id="sticky-3d-wrap">
+      <canvas id="exploded-box-canvas"></canvas>
+
+      <!-- Viewport Loader Indicator -->
+      <div class="canvas-loader" id="box-loader">
+        <div class="loader-pulse"></div>
+        <span>FABRICATING 3D BLACKBOX CASING...</span>
+      </div>
+
+      <!-- Top HUD Telemetry Bar on 3D Viewport -->
+      <div class="viewport-hud-bar">
+        <div class="hud-mode-pills">
+          <span class="box-status-tag" id="box-status-pill">BOX: CLOSED (0%)</span>
+          <span class="sensor-count-tag">8 SENSORS MOUNTED</span>
+          <span class="hud-odr-tag">1000 Hz DUAL-IMU</span>
+        </div>
+        <div class="hud-cam-actions">
+          <button class="v-cam-btn active" id="btn-cam-persp" title="Orbit 3D View">Orbit 3D</button>
+          <button class="v-cam-btn" id="btn-cam-top" title="Top-Down Sensor View">Top PCB</button>
+          <button class="v-cam-btn" id="btn-cam-side" title="Side Layer Separation">Side</button>
+          <button class="v-cam-btn" id="btn-toggle-wireframe" title="Toggle X-Ray Wireframe">X-Ray</button>
+          <button class="v-cam-btn" id="btn-toggle-autorotate" title="Toggle Auto-Spin">Auto-Spin</button>
+        </div>
+      </div>
+
+      <!-- Orbital Holographic Reticles & Data Rings in 3D Space -->
+      <div class="orbital-reticles-container" id="orbital-reticles">
+        <div class="orbital-ring ring-outer"></div>
+        <div class="orbital-ring ring-middle"></div>
+        <div class="orbital-ring ring-inner"></div>
+      </div>
+
+      <!-- Bottom Interactive Orbit Hint -->
+      <div class="viewport-orbit-hint" id="canvas-orbit-hint">
+        <span>🖱️ Scroll to Journey • Drag to Orbit 360° • Click Sensors in 3D</span>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         SCROLL STORYTELLING TRACK (5 IMMERSIVE NARRATIVE STAGES)
+         ======================================================================= -->
+    <div class="scrolly-track">
+
+      <!-- =====================================================================
+           STAGE 00: HERO // QUANTUM FLIGHT DATA LOGGER CORE
+           ===================================================================== -->
+      <section class="scrolly-stage stage-hero" id="hero-stage" data-stage="0">
+        <div class="stage-content-wrap">
+          <div class="hero-card-panel">
+            <div class="hero-badge">
+              <span class="badge-status-dot"></span>
+              <span>IGLOO 3D SCROLL MOTION ARCHITECTURE</span>
+            </div>
+
+            <h1 class="hero-title">
+              The Quantum <span class="gradient-text">Flight Data Logger</span> Casing.
+            </h1>
+
+            <p class="hero-description">
+              Crash-survivable titanium flight telemetry recorder for autonomous aerospace. 1000Hz dual IMU logging, real-time CAN-FD bus ingestion, and encrypted solid-state memory.
+            </p>
+
+            <!-- Interactive Hardware Motion Triggers -->
+            <div class="hero-motion-controls">
+              <span class="controls-label">KINETIC INTERACTION TRIGGERS:</span>
+              <div class="triggers-button-row">
+                <button class="trigger-btn active" id="btn-anim-pulse" title="Pulse internal core light & LEDs">
+                  <span class="btn-icon">⚡</span> Pulse Circuits
+                </button>
+                <button class="trigger-btn" id="btn-anim-explode" title="Toggle exploded 3D chassis">
+                  <span class="btn-icon">🧩</span> Explode Core
+                </button>
+                <button class="trigger-btn" id="btn-anim-stream" title="Simulate high-rate telemetry burst">
+                  <span class="btn-icon">📡</span> Data Stream
+                </button>
+                <button class="trigger-btn" id="btn-anim-reset" title="Reset all hardware animations">
+                  <span class="btn-icon">🔄</span> Reset Unit
+                </button>
+              </div>
+            </div>
+
+            <!-- Telemetry Stats Pill Bar -->
+            <div class="hero-stats-row">
+              <div class="hero-stat-card">
+                <span class="h-stat-num" id="stat-sample-rate">1,000</span>
+                <span class="h-stat-unit">Hz</span>
+                <span class="h-stat-lbl">SAMPLING RATE</span>
+              </div>
+              <div class="hero-stat-card">
+                <span class="h-stat-num" id="stat-shock-rating">50,000</span>
+                <span class="h-stat-unit">G</span>
+                <span class="h-stat-lbl">SHOCK SURVIVABILITY</span>
+              </div>
+              <div class="hero-stat-card">
+                <span class="h-stat-num" id="stat-write-speed">480</span>
+                <span class="h-stat-unit">MB/s</span>
+                <span class="h-stat-lbl">FLASH WRITE BUS</span>
+              </div>
+            </div>
+
+            <!-- Scroll Prompt Cue -->
+            <div class="scroll-cue-prompt">
+              <span class="cue-mouse-icon">
+                <span class="cue-wheel"></span>
+              </span>
+              <span class="cue-text">SCROLL TO UNBOX CHASSIS &amp; INSPECT SENSORS</span>
+              <span class="cue-arrow">↓</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           STAGE 01: CHASSIS // 3D EXPLODED BOX & SENSOR INSPECTOR
+           ===================================================================== -->
+      <section class="scrolly-stage stage-chassis" id="stage-chassis" data-stage="1">
+        <div class="stage-content-wrap split-dock">
+          <!-- Left: Explode Depth Tray Dock -->
+          <div class="chassis-control-dock">
+            <div class="stage-header-badge">
+              <span class="stage-tag">STAGE 01 // 3D SENSOR ARCHITECTURE</span>
+              <span class="pulse-live-badge">INTERACTIVE EXPLODED VIEW</span>
+            </div>
+            <h2 class="stage-title">Crash-Survivable Modular Casing</h2>
+            <p class="stage-desc">
+              Scroll down to separate the titanium lid, silicone EMI gasket, and avionics PCB. Drag to orbit 360°, scrub depth, or click any sensor in the 3D viewport.
+            </p>
+
+            <div class="exploded-controls-tray">
+              <div class="tray-slider-block">
+                <div class="tray-label-row">
+                  <span class="tray-title"><span class="icon">🧩</span> CHASSIS SEPARATION DEPTH</span>
+                  <span class="tray-percent" id="explode-percent-label">85% (Separating)</span>
+                </div>
+                <input type="range" class="explode-range-slider" id="slider-explode" min="0" max="100" value="85" step="0.5">
+                <div class="slider-anchors">
+                  <span class="anchor-point" data-val="0">0% Closed</span>
+                  <span class="anchor-point" data-val="35">35% Lid Open</span>
+                  <span class="anchor-point active" data-val="70">70% PCB Lift</span>
+                  <span class="anchor-point" data-val="100">100% Full Explosion</span>
+                </div>
+              </div>
+              <div class="tray-quick-actions">
+                <button class="btn-explode-action primary" id="btn-quick-open" title="Explode Open the Box">
+                  <span>⚡ Open Box</span>
+                </button>
+                <button class="btn-explode-action secondary" id="btn-quick-close" title="Assemble &amp; Seal the Box">
+                  <span>🔒 Close Box</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Interactive Sensor Inspector Dossier -->
+          <aside class="sensor-inspector-card">
+            <div class="inspector-header">
+              <div class="inspector-titles">
+                <span class="inspector-sub">SENSOR INSPECTOR // SELECT COMPONENT</span>
+                <h3 id="inspector-sensor-name">ICM-42688P Dual 6-DOF IMU</h3>
+              </div>
+              <span class="sensor-category-badge" id="inspector-sensor-category">INERTIAL DYNAMICS</span>
+            </div>
+
+            <!-- Sensor Selector Chips List -->
+            <div class="sensor-chips-scroll" id="sensor-chips-list">
+              <button class="sensor-chip-btn active" data-sensor="imu">
+                <span class="chip-dot cyan"></span>
+                <span>ICM-42688P IMU</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="baro">
+                <span class="chip-dot amber"></span>
+                <span>BMP390 Baro</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="mag">
+                <span class="chip-dot magenta"></span>
+                <span>RM3100 Compass</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="gnss">
+                <span class="chip-dot cyan"></span>
+                <span>ZED-F9P GNSS</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="flash">
+                <span class="chip-dot green"></span>
+                <span>128GB Flash</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="can">
+                <span class="chip-dot purple"></span>
+                <span>TCAN334 CAN-FD</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="mcu">
+                <span class="chip-dot cyan"></span>
+                <span>STM32H7 MCU</span>
+              </button>
+              <button class="sensor-chip-btn" data-sensor="supercap">
+                <span class="chip-dot amber"></span>
+                <span>SuperCap Backup</span>
+              </button>
+            </div>
+
+            <!-- Detailed Sensor Dossier Specifications -->
+            <div class="sensor-dossier-body">
+              <div class="dossier-graphic-hero">
+                <div class="graphic-chip-preview" id="dossier-chip-preview">
+                  <div class="microchip-visual">
+                    <div class="chip-notch"></div>
+                    <span class="chip-label" id="microchip-label">ICM-42688P</span>
+                    <div class="chip-pins-left"></div>
+                    <div class="chip-pins-right"></div>
+                  </div>
+                </div>
+                <div class="graphic-telemetry-live">
+                  <span class="live-tag"><span class="pulse-dot"></span> LIVE SENSOR STREAM</span>
+                  <div class="live-stream-data" id="dossier-live-data">
+                    <div class="data-row"><span class="k">RATE:</span><span class="v" id="live-rate">1,000 Hz</span></div>
+                    <div class="data-row"><span class="k">STATUS:</span><span class="v cyan" id="live-status">CALIBRATED (EKF2)</span></div>
+                    <div class="data-row"><span class="k">OUTPUT:</span><span class="v" id="live-val">X: +0.02g | Y: -0.01g | Z: 1.00g</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Description & Function in Flight Logger -->
+              <div class="dossier-description-block">
+                <h4>Role in Flight Data Recording</h4>
+                <p id="dossier-description-text">
+                  Primary motion sensor capturing high-frequency rotational velocities and linear accelerations across all 3 axes (&theta;, &phi;, &psi;). Essential for reconstructing aircraft trajectory, G-force loads during high-rate maneuvers, and impact shock profiling.
+                </p>
+              </div>
+
+              <!-- Technical Spec Grid -->
+              <div class="dossier-specs-grid">
+                <div class="spec-tile">
+                  <span class="s-label">PROTOCOL</span>
+                  <span class="s-val" id="spec-protocol">SPI @ 24 MHz</span>
+                </div>
+                <div class="spec-tile">
+                  <span class="s-label">BANDWIDTH</span>
+                  <span class="s-val" id="spec-bandwidth">1000 Hz ODR</span>
+                </div>
+                <div class="spec-tile">
+                  <span class="s-label">ACCURACY / RANGE</span>
+                  <span class="s-val" id="spec-range">&plusmn;32g / &plusmn;4000&deg;/s</span>
+                </div>
+                <div class="spec-tile">
+                  <span class="s-label">SHOCK RATING</span>
+                  <span class="s-val" id="spec-shock">20,000 G</span>
+                </div>
+              </div>
+
+              <!-- Focus 3D Button -->
+              <button class="btn-focus-sensor" id="btn-focus-in-3d">
+                <span>🎯 Focus Sensor in 3D Viewport</span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           STAGE 02: SENSORS // 1000HZ INGESTION PIPELINES & EKF2 CONVERGENCE
+           ===================================================================== -->
+      <section class="scrolly-stage stage-sensors" id="stage-sensors" data-stage="2">
+        <div class="stage-content-wrap">
+          <div class="pipeline-console-card">
+            <div class="stage-header-badge">
+              <span class="stage-tag">STAGE 02 // SENSOR INGESTION PIPELINE</span>
+              <span class="pulse-live-badge">1000 HZ DMA STREAMING</span>
+            </div>
+            <h2 class="stage-title">High-Frequency Telemetry Ingestion &amp; EKF2 Fusion</h2>
+            <p class="stage-desc">
+              The dual ICM-42688P IMUs stream 1,000 samples per second into direct memory access (DMA) buffers. The ARM Cortex-M7 executes real-time 15-state Extended Kalman Filtering with zero frame drops.
+            </p>
+
+            <!-- Dynamic Live Waveform Canvas Oscilloscope -->
+            <div class="pipeline-oscilloscope-wrap">
+              <div class="oscilloscope-header">
+                <div class="osc-title">
+                  <span class="osc-pulse"></span>
+                  <span>LIVE ACCELEROMETER &amp; GYRO WAVEFORM (1000Hz ODR)</span>
+                </div>
+                <div class="osc-legend">
+                  <span class="legend-ch ch-x">X-AXIS (ROLL)</span>
+                  <span class="legend-ch ch-y">Y-AXIS (PITCH)</span>
+                  <span class="legend-ch ch-z">Z-AXIS (YAW)</span>
+                </div>
+              </div>
+              <canvas id="pipeline-waveform-canvas" width="700" height="150"></canvas>
+            </div>
+
+            <!-- Pipeline Metrics & Kalman Indicators -->
+            <div class="pipeline-metrics-grid">
+              <div class="p-metric-card">
+                <div class="p-metric-top">
+                  <span class="p-lbl">DMA BUS THROUGHPUT</span>
+                  <span class="p-tag-pill green">NOMINAL</span>
+                </div>
+                <div class="p-num" id="p-metric-packets">12,480 <span class="p-unit">pkts/s</span></div>
+                <div class="p-bar"><div class="p-bar-fill" style="width: 78%;"></div></div>
+                <div class="p-sub">Buffer Utilization: 34.2% • 0 Dropped Packets</div>
+              </div>
+
+              <div class="p-metric-card">
+                <div class="p-metric-top">
+                  <span class="p-lbl">15-STATE EKF2 CONVERGENCE</span>
+                  <span class="p-tag-pill cyan">CONVERGED</span>
+                </div>
+                <div class="p-num" id="p-metric-ekf">0.0024 <span class="p-unit">&sigma; variance</span></div>
+                <div class="p-bar"><div class="p-bar-fill cyan" style="width: 94%;"></div></div>
+                <div class="p-sub">Attitude Drift Compensated • RTK GNSS Lock Active</div>
+              </div>
+
+              <div class="p-metric-card">
+                <div class="p-metric-top">
+                  <span class="p-lbl">CALIBRATION RUNTIME</span>
+                  <span class="p-tag-pill purple">AUTO-NULL</span>
+                </div>
+                <div class="p-num">24 &mu;s <span class="p-unit">latency</span></div>
+                <div class="p-bar"><div class="p-bar-fill purple" style="width: 88%;"></div></div>
+                <div class="p-sub">Gyro Bias Tracking • Temperature Thermal Array</div>
+              </div>
+            </div>
+
+            <!-- Interactive Harmonic Test Injection Row -->
+            <div class="pipeline-actions-row">
+              <button class="btn-pipeline-action" id="btn-inject-harmonic">
+                <span>⚡ Inject 240Hz Rotor Vibration Harmonic</span>
+              </button>
+              <button class="btn-pipeline-action" id="btn-simulate-shock">
+                <span>💥 Simulate +12G Pull-Up Maneuver</span>
+              </button>
+              <button class="btn-pipeline-action secondary" id="btn-reset-pipeline">
+                <span>🔄 Reset Baseline Stream</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           STAGE 03: MEMORY // DUAL-BUS STORAGE (SD CARD VS FRAM)
+           ===================================================================== -->
+      <section class="scrolly-stage stage-memory" id="stage-memory" data-stage="3">
+        <div class="stage-content-wrap">
+          <div class="stage-memory-deck">
+            <div class="stage-header-block">
+              <div class="stage-header-badge">
+                <span class="stage-tag">STAGE 03 // DUAL-BUS STORAGE ARCHITECTURE</span>
+                <span class="pulse-live-badge">SD CARD vs FERROELECTRIC FRAM</span>
+              </div>
+              <h2 class="stage-title">Crash-Proof Solid State Storage &amp; Incident Flash Vault</h2>
+              <p class="stage-desc">
+                High-volume <strong>MicroSD (FAT32)</strong> continuously archives 1000Hz normal flight telemetry streams, while zero-latency <strong>Ferroelectric FRAM</strong> freezes critical danger spikes and warning events under 150 nanoseconds with 50,000G survivability.
+              </p>
+            </div>
+
+            <!-- Dual Storage Showcase Cards -->
+            <div class="stage-memory-showcase-grid">
+              <!-- Card 1: SD Card -->
+              <div class="memory-card-showcase sd-showcase">
+                <div class="card-beam-glow"></div>
+                <div class="showcase-top">
+                  <span class="showcase-icon">💾</span>
+                  <div>
+                    <span class="showcase-sub">CONTINUOUS NORMAL STREAM</span>
+                    <h3>MicroSD Card Storage</h3>
+                  </div>
+                  <span class="showcase-badge-pill cyan">18 NORMAL LOGS</span>
+                </div>
+                <p class="showcase-desc">
+                  Primary 64GB high-capacity FAT32 filesystem recording 1000Hz multi-sensor streams (Dual IMUs, Baro, RTK GPS, ESC Quad RPMs).
+                </p>
+                <div class="showcase-metrics-row">
+                  <div class="s-metric"><span class="k">CAPACITY</span><span class="v">64.0 GB</span></div>
+                  <div class="s-metric"><span class="k">WRITE BUS</span><span class="v cyan">480 MB/s</span></div>
+                  <div class="s-metric"><span class="k">STATUS</span><span class="v emerald">MOUNTED</span></div>
+                </div>
+                <a href="dashboard.html#logger" class="btn-showcase-explore">
+                  <span>Open SD Card Logs in Logger Tab →</span>
+                </a>
+              </div>
+
+              <!-- Card 2: FRAM -->
+              <div class="memory-card-showcase fram-showcase">
+                <div class="card-beam-glow"></div>
+                <div class="showcase-top">
+                  <span class="showcase-icon">⚡</span>
+                  <div>
+                    <span class="showcase-sub">CRITICAL HAZARD VAULT</span>
+                    <h3>Ferroelectric FRAM</h3>
+                  </div>
+                  <span class="showcase-badge-pill amber" id="fram-badge-counter">6 DANGER &amp; WARNING ⚠️</span>
+                </div>
+                <p class="showcase-desc">
+                  8MB non-volatile aerospace memory capturing nanosecond frozen snapshots during G-shock spikes, thermal runaway, and failsafes.
+                </p>
+                <div class="showcase-metrics-row">
+                  <div class="s-metric"><span class="k">WRITE SPEED</span><span class="v amber">150 ns</span></div>
+                  <div class="s-metric"><span class="k">SHOCK LIMIT</span><span class="v purple">50,000 G</span></div>
+                  <div class="s-metric"><span class="k">POWER-CUT</span><span class="v emerald">IMMUNE</span></div>
+                </div>
+                <a href="dashboard.html#logger" class="btn-showcase-explore fram-btn">
+                  <span>Inspect Danger &amp; Warning Data in Logger Tab →</span>
+                </a>
+              </div>
+            </div>
+
+            <!-- Interactive 50,000G Shock Event Simulator Strip -->
+            <div class="incident-simulator-strip">
+              <div class="sim-left">
+                <span class="sim-alert-icon">⚠️</span>
+                <div>
+                  <div class="sim-title">INTERACTIVE CRASH-HAZARD SIMULATOR</div>
+                  <div class="sim-desc">Simulate a high-impact deceleration event to witness 150ns instant FRAM freeze-frame recording.</div>
+                </div>
+              </div>
+              <div class="sim-right">
+                <button class="btn-trigger-shock" id="btn-simulate-fram-shock">
+                  <span class="pulse-dot-red"></span>
+                  <span>⚡ Trigger 50,000G Danger Shock Incident</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Prominent Data Flow Subpage Callout Strip -->
+            <div class="flow-callout-strip">
+              <a href="flow.html" class="flow-callout-btn">
+                <span class="flow-icon">⚡</span>
+                <span class="flow-title">Launch Live Data Flow Visualizer: Normal ➔ SD Card | Danger ➔ FRAM</span>
+                <span class="flow-tag">INTERACTIVE ROUTER ➔</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           STAGE 04: COCKPIT // LIVE 3D DRONE TELEMETRY BRIDGE
+           ===================================================================== -->
+      <section class="scrolly-stage stage-cockpit" id="stage-cockpit" data-stage="4">
+        <div class="stage-content-wrap">
+          <div class="bridge-action-card">
+            <div class="card-beam-glow"></div>
+            <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+            <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+            <div class="bridge-content">
+              <div class="bridge-badge">
+                <span class="pulse-dot-green"></span>
+                <span>SUBPAGE READY // PORT 5050</span>
+              </div>
+
+              <h3>Stream Telemetry to Live 3D Drone Cockpit</h3>
+              <p>
+                The flight data logger streams directly into the full 10-module AERO // QUANTUM 3D Telemetry Dashboard. Access the 6-DOF Attitude Controller, 3D Geodesic Force Field, Primary Flight Display (PFD), Autonomous Waypoints, Cyber Terminal, and 6-Axis G-Force Ball.
+              </p>
+
+              <div class="bridge-buttons-row">
+                <a href="dashboard.html" class="btn-primary-launch">
+                  <span>Enter 3D Telemetry Dashboard</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="flow.html" class="btn-secondary-replay" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                  <span>⚡ Open Data Flow Router</span>
+                </a>
+                <button class="btn-secondary-replay" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                  <span>↑ Back to Top</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       IGLOO-STYLE FIXED BOTTOM TIMELINE SCRUBBER
+       Interactive timeline progress, stage chapters, and coordinate telemetry
+       ========================================================================= -->
+  <nav class="igloo-bottom-timeline" id="igloo-timeline">
+    <div class="timeline-meta">
+      <div class="timeline-title-row">
+        <span class="t-badge">MISSION SCROLL TIMELINE</span>
+        <span class="t-stage-name" id="timeline-stage-name">STAGE 00 // QUANTUM LOGGER CORE</span>
+      </div>
+      <div class="timeline-telemetry-row">
+        <span class="t-ticker-item" id="ticker-coords">ORBIT: 0.85 &bull; 0.58 &bull; 11.2x</span>
+        <span class="t-ticker-item" id="ticker-odr">ODR: 1000Hz</span>
+      </div>
+      <div class="timeline-pct" id="timeline-pct-label">00%</div>
+    </div>
+    <div class="timeline-track-wrap" id="timeline-track-wrap">
+      <div class="timeline-track-progress" id="timeline-track-fill"></div>
+      <div class="timeline-chapters">
+        <button class="t-chapter active" data-stage="0" title="Jump to Stage 0: Logger Core">
+          <span class="t-num">00</span>
+          <span class="t-name">CORE</span>
+        </button>
+        <button class="t-chapter" data-stage="1" title="Jump to Stage 1: Chassis 3D">
+          <span class="t-num">01</span>
+          <span class="t-name">CHASSIS 3D</span>
+        </button>
+        <button class="t-chapter" data-stage="2" title="Jump to Stage 2: Sensor Pipelines">
+          <span class="t-num">02</span>
+          <span class="t-name">SENSORS</span>
+        </button>
+        <button class="t-chapter" data-stage="3" title="Jump to Stage 3: Dual-Bus Storage">
+          <span class="t-num">03</span>
+          <span class="t-name">DUAL STORAGE</span>
+        </button>
+        <button class="t-chapter" data-stage="4" title="Jump to Stage 4: Live Cockpit Bridge">
+          <span class="t-num">04</span>
+          <span class="t-name">COCKPIT</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- FOOTER -->
+  <footer class="landing-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <span class="f-brand">AERO<span class="accent-cyan">LOGGER</span></span>
+        <span class="f-tag">AUTONOMOUS TACTICAL FLIGHT TELEMETRY ARCHITECTURE</span>
+      </div>
+      <div class="footer-right">
+        <a href="dashboard.html" class="f-link">Open Dashboard Subpage →</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="landing.js"></script>
+</body>
+</html>

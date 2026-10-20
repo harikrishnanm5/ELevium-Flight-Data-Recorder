@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO // QUANTUM • Next-Gen Autonomous Flight Telemetry & 3D Drone Holo-Deck</title>
+  <meta name="description" content="Next-generation futuristic flight telemetry dashboard with 3D drone spatial gyro, holographic energy shields, tactical LIDAR point cloud, neural autopilot matrix, and BlackBox log player.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Three.js for high-fidelity 3D Drone Rendering -->
+  <script src="three.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="aero-cockpit theme-cyber">
+  <!-- Ambient Space Holographic Layers -->
+  <div class="aero-bg-grid"></div>
+  <div class="crt-scanlines"></div>
+  <div class="hologram-dust"></div>
+  <div class="cockpit-glow glow-cyan"></div>
+  <div class="cockpit-glow glow-magenta"></div>
+  <div class="cockpit-glow glow-purple"></div>
+
+  <!-- TOP COMMAND BAR (HOLO-DECK & BLACKBOX LOGGER) -->
+  <header class="hud-header">
+    <div class="header-left">
+      <div class="brand-badge">
+        <div class="holo-quantum-core">
+          <div class="core-ring r1"></div>
+          <div class="core-ring r2"></div>
+          <div class="core-center"></div>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-text">AERO<span class="accent-cyan">QUANTUM</span></span>
+          <span class="hub-tag">HOLO-OS V6.2 // NEURAL FLIGHT DECK</span>
+        </div>
+        <a href="index.html" class="back-home-badge" title="Return to Frontpage / Casing">
+          ← Frontpage
+        </a>
+      </div>
+
+      <!-- Mission Elapsed Clock -->
+      <div class="mission-clock-pill">
+        <span class="clock-label">MET:</span>
+        <span class="clock-val" id="mission-clock">00:18:42.8</span>
+      </div>
+    </div>
+
+    <!-- MASTER NAVIGATION TABS: 3D HOLO-DECK vs DATA FLOW vs BLACKBOX LOGGER -->
+    <nav class="hud-master-tabs" id="master-nav-tabs">
+      <button class="master-tab-btn active" id="tab-btn-telemetry" data-tab="telemetry" title="Real-Time 3D Drone Telemetry & Flight Controls (Key: 1)">
+        <span class="tab-icon">🛰️</span>
+        <span class="tab-label">3D Holo-Deck</span>
+        <span class="tab-live-dot"></span>
+      </button>
+
+      <a href="flow.html" class="master-tab-btn tab-link" title="Interactive Dual-Bus Telemetry Data Flow (Normal ➔ SD | Danger ➔ FRAM)">
+        <span class="tab-icon">⚡</span>
+        <span class="tab-label">Data Flow Router</span>
+        <span class="tab-badge-split">
+          <span class="badge-sd">Normal ➔ SD</span>
+          <span class="badge-divider">|</span>
+          <span class="badge-fram">Danger ➔ FRAM</span>
+        </span>
+      </a>
+
+      <button class="master-tab-btn" id="tab-btn-logger" data-tab="logger" title="BlackBox Storage: SD Card Normal Data & FRAM Danger Events (Key: 2)">
+        <span class="tab-icon">💾</span>
+        <span class="tab-label">BlackBox Logger</span>
+        <span class="tab-badge-split">
+          <span class="badge-sd">SD: 18</span>
+          <span class="badge-divider">|</span>
+          <span class="badge-fram">FRAM: 6 ⚠️</span>
+        </span>
+      </button>
+
+      <a href="index.html#stage-chassis" class="master-tab-btn tab-link" title="Inspect Exploded 3D Hardware Casing">
+        <span class="tab-icon">🧩</span>
+        <span class="tab-label">Hardware Casing</span>
+      </a>
+    </nav>
+
+    <div class="header-right">
+      <!-- Arming State Switch with Holographic Laser Ring -->
+      <button class="flight-state-badge armed" id="arm-status-pill" title="Toggle Arm / Disarm Engine">
+        <span class="state-dot"></span>
+        <span id="arm-label">QUANTUM ARMED</span>
+      </button>
+
+      <!-- Battery Gauge -->
+      <div class="hud-stat-pill">
+        <span class="stat-icon">🔋</span>
+        <div class="stat-details">
+          <span class="stat-title">SOLID-STATE 4S</span>
+          <span class="stat-val" id="hud-batt-volt">15.84 V (78%)</span>
+        </div>
+      </div>
+
+      <!-- GNSS Stat -->
+      <div class="hud-stat-pill">
+        <span class="stat-icon">🛰️</span>
+        <div class="stat-details">
+          <span class="stat-title">QUANTUM GNSS</span>
+          <span class="stat-val" id="hud-gps-sats">24 SATS (RTK)</span>
+        </div>
+      </div>
+
+      <!-- Audio Alert Toggle -->
+      <button class="btn-icon-hud" id="btn-audio-toggle" title="Toggle Sci-Fi Synthesized Cockpit Audio">
+        <span id="audio-icon">🔊</span>
+      </button>
+
+      <!-- Log Export Button -->
+      <button class="btn-primary-action" id="btn-export-log" title="Export Current Telemetry Log (CSV)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>Export Log</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN MULTI-VIEW WORKSPACE -->
+  <main class="dashboard-views-container">
+    <!-- ====================================================================
+         VIEW 1: 3D TELEMETRY HOLO-DECK & COCKPIT SYSTEMS
+         ==================================================================== -->
+    <div class="cockpit-view-pane active" id="view-telemetry">
+      <!-- Cockpit Flight Mode & Systems Sub-Bar -->
+      <div class="telemetry-sub-bar">
+        <div class="sub-bar-left">
+          <span class="sub-bar-tag">AUTOPILOT FLIGHT VECTOR:</span>
+          <!-- Active Flight Mode Pill (Framer Motion Capsule) -->
+          <div class="center-mode-selector">
+            <div class="mode-pill-track">
+              <button class="mode-btn active" data-mode="hover">
+                <span class="mode-icon">🛰️</span> Auto-Hover
+              </button>
+              <button class="mode-btn" data-mode="bank">
+                <span class="mode-icon">🔄</span> High-G Bank
+              </button>
+              <button class="mode-btn" data-mode="acro">
+                <span class="mode-icon">⚡</span> Acro Roll
+              </button>
+              <button class="mode-btn" data-mode="neural">
+                <span class="mode-icon">🧠</span> Neural Pilot
+              </button>
+              <button class="mode-btn" data-mode="manual">
+                <span class="mode-icon">🎮</span> Manual
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sub-bar-right">
+          <!-- Energy Shield Toggle -->
+          <button class="hud-toggle-btn active" id="btn-toggle-shield" title="Toggle 3D Force Field Energy Shield">
+            <span class="toggle-icon">🛡️</span>
+            <span class="toggle-label">Shield: ON</span>
+          </button>
+
+          <!-- Drone Headlights Toggle -->
+          <button class="hud-toggle-btn active" id="btn-toggle-lights" title="Toggle High-Beam Ion Spotlights">
+            <span class="toggle-icon">💡</span>
+            <span class="toggle-label">Ion Beams: ON</span>
+          </button>
+
+          <!-- Quick Jump to Logger View -->
+          <button class="btn-sub-logger-jump" id="btn-jump-to-logger" title="Open Dual-Bus BlackBox Logger (SD Card & FRAM)">
+            <span class="btn-icon">💾</span>
+            <span>BlackBox Logger</span>
+            <span class="pill-hazard">6 Incidents ⚠️</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN MODULAR DASHBOARD GRID -->
+      <div class="dashboard-grid">
+    <!-- ====================================================================
+         LEFT COLUMN: ATTITUDE CONTROLLER & BLACKBOX RECORDER
+         ==================================================================== -->
+    <aside class="dash-sidebar left-panel">
+      <!-- MODULE 1: Real-time Gyro Sliders & 2-Axis Stick -->
+      <div class="cockpit-card spotlight-card border-beam-active">
+        <div class="card-beam-glow"></div>
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 01 // 6-DOF OVERRIDE</span>
+            <h3>Attitude Vector Control</h3>
+          </div>
+          <button class="btn-text-action" id="btn-zero-attitude">Zero All</button>
+        </div>
+
+        <div class="control-sliders-list">
+          <!-- Pitch Slider -->
+          <div class="slider-row">
+            <div class="slider-label-bar">
+              <span class="axis-tag pitch-tag">PITCH (θ)</span>
+              <span class="slider-val" id="val-pitch-slider">+0.0°</span>
+            </div>
+            <input type="range" class="aero-slider slider-pitch-glow" id="slider-pitch" min="-45" max="45" value="0" step="0.5">
+            <div class="slider-ticks">
+              <span>-45° (Nose Down)</span>
+              <span>0° (Level)</span>
+              <span>+45° (Nose Up)</span>
+            </div>
+          </div>
+
+          <!-- Roll Slider -->
+          <div class="slider-row">
+            <div class="slider-label-bar">
+              <span class="axis-tag roll-tag">ROLL (φ)</span>
+              <span class="slider-val" id="val-roll-slider">+0.0°</span>
+            </div>
+            <input type="range" class="aero-slider slider-roll-glow" id="slider-roll" min="-45" max="45" value="0" step="0.5">
+            <div class="slider-ticks">
+              <span>-45° (Left)</span>
+              <span>0° (Level)</span>
+              <span>+45° (Right)</span>
+            </div>
+          </div>
+
+          <!-- Yaw Slider -->
+          <div class="slider-row">
+            <div class="slider-label-bar">
+              <span class="axis-tag yaw-tag">YAW / HEADING (ψ)</span>
+              <span class="slider-val" id="val-yaw-slider">000°</span>
+            </div>
+            <input type="range" class="aero-slider slider-yaw-glow" id="slider-yaw" min="0" max="360" value="0" step="1">
+            <div class="slider-ticks">
+              <span>0° (N)</span>
+              <span>90° (E)</span>
+              <span>180° (S)</span>
+              <span>270° (W)</span>
+            </div>
+          </div>
+
+          <!-- Throttle Slider -->
+          <div class="slider-row">
+            <div class="slider-label-bar">
+              <span class="axis-tag throttle-tag">ION THRUST / ALT</span>
+              <span class="slider-val" id="val-throttle-slider">52%</span>
+            </div>
+            <input type="range" class="aero-slider slider-alt-glow" id="slider-throttle" min="0" max="100" value="52" step="1">
+          </div>
+        </div>
+
+        <!-- 2-Axis Interactive Virtual Flight Stick -->
+        <div class="joystick-subcard">
+          <div class="stick-header">
+            <span>2-AXIS HOLOGRAPHIC FLIGHT STICK</span>
+            <span class="stick-hint">Drag puck to bank & pitch</span>
+          </div>
+          <div class="virtual-stick-arena" id="stick-arena">
+            <div class="stick-rings"></div>
+            <div class="stick-concentric-2"></div>
+            <div class="stick-crosshairs"></div>
+            <div class="stick-puck" id="stick-puck">
+              <div class="puck-core"></div>
+              <div class="puck-glow-ring"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 2: BlackBox Flight Log Replay -->
+      <div class="cockpit-card spotlight-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 02 // BLACKBOX RECORDER</span>
+            <h3>Mission Flight Log Replay</h3>
+          </div>
+          <span class="log-indicator live" id="log-status-indicator">RECORDING</span>
+        </div>
+
+        <div class="log-player-controls">
+          <!-- Timeline Scrubber -->
+          <div class="timeline-bar-wrapper">
+            <input type="range" class="timeline-scrubber" id="log-scrubber" min="0" max="120" value="48" step="0.1">
+            <div class="timeline-time-row">
+              <span id="log-current-time">00:48.2</span>
+              <span>/ 02:00.0</span>
+            </div>
+          </div>
+
+          <!-- Playback Actions -->
+          <div class="player-actions-row">
+            <button class="btn-play-pause" id="btn-play-pause">
+              <span id="play-icon">▶</span>
+              <span id="play-label">Play Log</span>
+            </button>
+            <div class="speed-toggle-group">
+              <button class="speed-btn active" data-speed="1">1x</button>
+              <button class="speed-btn" data-speed="2">2x</button>
+              <button class="speed-btn" data-speed="4">4x</button>
+              <button class="speed-btn" data-speed="8">8x</button>
+            </div>
+          </div>
+
+          <div class="log-file-meta">
+            <span class="meta-label">FILE: <code>LOG_20261004_QUANTUM.BBL</code></span>
+            <span class="meta-label">SAMPLE: <code>1000Hz Dual IMU</code></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 08: Quantum Data Bus & Cyber Command Terminal -->
+      <div class="cockpit-card spotlight-card terminal-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 08 // TELEMETRY BUS</span>
+            <h3>Cyber Command Terminal</h3>
+          </div>
+          <span class="terminal-status-badge"><span class="pulse-mini"></span> BUS: 10 Gbps</span>
+        </div>
+
+        <!-- Live Telemetry Stream Area -->
+        <div class="terminal-output" id="terminal-log-output">
+          <div class="term-line sys">[SYSTEM] QUANTUM BUS READY // PROTOCOL: MAVLINK_V3</div>
+          <div class="term-line info">[KALMAN] 6-DOF EKF2 CONVERGED (RESIDUAL: 0.002)</div>
+          <div class="term-line ok">[SHIELD] 3D FORCE FIELD SYNC: 100% COHERENCE</div>
+          <div class="term-line warn">[GEO-FENCE] PERIMETER CYLINDER: R=1000m ARMED</div>
+          <div class="term-line hex" id="term-hex-stream">0x7F2A 0x8891 0x00FF 0xCA4B 0x1102 [STREAM_OK]</div>
+        </div>
+
+        <!-- Quick Macro Action Chips -->
+        <div class="terminal-macros-row">
+          <button class="macro-chip" data-cmd="CALIBRATE">Calibrate IMU</button>
+          <button class="macro-chip" data-cmd="SHIELD_BOOST">Boost Shield</button>
+          <button class="macro-chip" data-cmd="WARP_HOP">Warp Hop</button>
+          <button class="macro-chip" data-cmd="RTH_ENGAGE">Auto RTH</button>
+        </div>
+
+        <!-- Terminal Command Input Bar -->
+        <form class="terminal-input-bar" id="term-command-form" onsubmit="return false;">
+          <span class="prompt-symbol">&gt;</span>
+          <input type="text" class="term-input" id="term-command-input" placeholder="Type command (e.g. 'help', 'warp', 'rth')..." autocomplete="off">
+          <button type="submit" class="btn-term-send" id="btn-term-send">EXEC</button>
+        </form>
+      </div>
+    </aside>
+
+    <!-- ====================================================================
+         CENTER STAGE: 3D HOLOGRAPHIC DRONE VIEWPORT & OSCILLOSCOPE
+         ==================================================================== -->
+    <section class="dash-center-column">
+      <!-- MODULE 3: 3D Holographic Drone Viewport Stage -->
+      <div class="cockpit-card drone-stage-card spotlight-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <!-- Floating Telemetry HUD on Top of 3D Drone -->
+        <div class="stage-hud-overlay">
+          <div class="gyro-tele-readouts">
+            <div class="tele-item pitch-glow">
+              <span class="tele-lbl">PITCH (θ)</span>
+              <span class="tele-num" id="gyro-disp-pitch">+0.0°</span>
+            </div>
+            <div class="tele-item roll-glow">
+              <span class="tele-lbl">ROLL (φ)</span>
+              <span class="tele-num" id="gyro-disp-roll">+0.0°</span>
+            </div>
+            <div class="tele-item yaw-glow">
+              <span class="tele-lbl">YAW (ψ)</span>
+              <span class="tele-num" id="gyro-disp-yaw">000°</span>
+            </div>
+            <div class="tele-item alt-glow">
+              <span class="tele-lbl">ALTITUDE</span>
+              <span class="tele-num" id="gyro-disp-alt">24.5 m</span>
+            </div>
+          </div>
+
+          <!-- Stage Controls Cluster (Camera + Shaders) -->
+          <div class="stage-controls-cluster">
+            <!-- 3D Camera Controls -->
+            <div class="camera-actions-group">
+              <button class="cam-btn active" data-cam="orbit" title="Orbit Camera">Orbit 3D</button>
+              <button class="cam-btn" data-cam="top" title="Top-Down Alignment">Top</button>
+              <button class="cam-btn" data-cam="cockpit" title="Chase FPV Cam">FPV Chase</button>
+              <button class="cam-btn" data-cam="tactical" title="Tactical Isometric Cam">Iso 45°</button>
+              <button class="cam-btn" id="btn-reset-cam" title="Reset View">Reset</button>
+            </div>
+
+            <!-- Holographic Shaders & Warp Controls -->
+            <div class="holo-shader-group">
+              <button class="holo-pill active" data-shader="holo" title="Quantum Hologram Mode">✨ Holo</button>
+              <button class="holo-pill" data-shader="matrix" title="Wireframe Cyber Matrix">🟩 Matrix</button>
+              <button class="holo-pill" data-shader="stealth" title="Dark Titanium Stealth">🥷 Stealth</button>
+              <button class="holo-pill warp-btn" id="btn-warp-jump" title="Engage Hyperspace Warp Jump">⚡ WARP</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tactical HUD Reticle (OSD Overlay) -->
+        <div class="tactical-osd-reticle">
+          <div class="reticle-box"></div>
+          <div class="reticle-cross"></div>
+          <div class="reticle-corner-marks"></div>
+          <span class="reticle-tag">LOCK: QUANTUM_DRONE_01</span>
+        </div>
+
+        <!-- Three.js Canvas Container -->
+        <div class="drone-3d-viewport" id="drone-container">
+          <canvas id="drone-canvas"></canvas>
+          <div class="viewport-loader" id="drone-loader">
+            <div class="loader-spinner"></div>
+            <span>INITIALIZING 3D QUANTUM HOLO-DECK...</span>
+          </div>
+        </div>
+
+        <!-- Stage Bottom Status Bar -->
+        <div class="drone-stage-footer">
+          <div class="prop-speed-indicator">
+            <span class="motor-label">QUAD MOTOR RPM:</span>
+            <div class="motor-pills">
+              <span class="motor-val" id="m1-rpm">M1: 14,200</span>
+              <span class="motor-val" id="m2-rpm">M2: 14,180</span>
+              <span class="motor-val" id="m3-rpm">M3: 14,210</span>
+              <span class="motor-val" id="m4-rpm">M4: 14,190</span>
+            </div>
+          </div>
+          <div class="gyro-refresh-badge">
+            <span class="pulse-mini"></span>
+            <span>IMU ODR: 1000 Hz • COMPOSITOR: 120 FPS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 4: Live Multi-Channel Strip Chart (Oscilloscope) -->
+      <div class="cockpit-card strip-chart-card spotlight-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header chart-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 04 // REAL-TIME IMU RECORDER</span>
+            <h3>Multi-Channel Waveform Oscilloscope</h3>
+          </div>
+          <div class="chart-legend-row">
+            <span class="legend-badge pitch-badge"><span class="dot-swatch"></span> Pitch (°)</span>
+            <span class="legend-badge roll-badge"><span class="dot-swatch"></span> Roll (°)</span>
+            <span class="legend-badge yaw-badge"><span class="dot-swatch"></span> Yaw (°)</span>
+            <span class="legend-badge alt-badge"><span class="dot-swatch"></span> Alt (m)</span>
+          </div>
+        </div>
+
+        <!-- Canvas for Dynamic Graph -->
+        <div class="chart-canvas-container">
+          <canvas id="telemetry-chart" width="900" height="175"></canvas>
+        </div>
+      </div>
+
+      <!-- MODULE 09: 6-Axis Dynamic G-Force Vector Ball & Accelerometer Spectrum -->
+      <div class="cockpit-card spotlight-card gforce-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 09 // INERTIAL DYNAMICS</span>
+            <h3>6-Axis G-Force Vector Ball & Spectrum</h3>
+          </div>
+          <div class="g-status-indicator normal" id="g-status-pill">
+            <span id="g-status-text">NOMINAL LOAD</span>
+          </div>
+        </div>
+
+        <div class="gforce-content-grid">
+          <!-- 2D/3D Circular G-Force Ball Meter -->
+          <div class="g-ball-viewport">
+            <canvas id="gball-canvas" width="220" height="150"></canvas>
+            <span class="g-center-label">0.0 G</span>
+          </div>
+
+          <!-- Digital G-Forces Breakdown -->
+          <div class="g-axes-metrics">
+            <div class="g-axis-row">
+              <span class="g-lbl">LATERAL (Gx):</span>
+              <span class="g-val cyan" id="g-val-x">+0.04 G</span>
+              <div class="g-mini-bar"><div class="g-fill" id="g-bar-x" style="width: 4%;"></div></div>
+            </div>
+            <div class="g-axis-row">
+              <span class="g-lbl">LONGITUDINAL (Gy):</span>
+              <span class="g-val magenta" id="g-val-y">-0.02 G</span>
+              <div class="g-mini-bar"><div class="g-fill" id="g-bar-y" style="width: 2%;"></div></div>
+            </div>
+            <div class="g-axis-row">
+              <span class="g-lbl">VERTICAL (Gz):</span>
+              <span class="g-val emerald" id="g-val-z">1.02 G</span>
+              <div class="g-mini-bar"><div class="g-fill" id="g-bar-z" style="width: 20%;"></div></div>
+            </div>
+            <div class="g-axis-row peak-row">
+              <span class="g-lbl">PEAK G-LIMIT:</span>
+              <span class="g-val amber" id="g-val-peak">1.48 G / 5.0 G</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         RIGHT COLUMN: PRIMARY FLIGHT DISPLAY (PFD) & AVIONICS STATUS
+         ==================================================================== -->
+    <aside class="dash-sidebar right-panel">
+      <!-- MODULE 5: Primary Flight Display (Artificial Horizon) -->
+      <div class="cockpit-card spotlight-card pfd-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 05 // AVIONICS HUD</span>
+            <h3>Primary Flight Display (PFD)</h3>
+          </div>
+          <span class="pfd-mode-tag">ATTITUDE EADI</span>
+        </div>
+
+        <!-- Artificial Horizon Canvas Container -->
+        <div class="pfd-viewport-box">
+          <canvas id="pfd-canvas" width="340" height="235"></canvas>
+        </div>
+
+        <div class="pfd-footer-metrics">
+          <div class="pfd-submetric">
+            <span class="subm-lbl">AIRSPEED</span>
+            <span class="subm-val" id="pfd-airspeed">42 km/h</span>
+          </div>
+          <div class="pfd-submetric">
+            <span class="subm-lbl">VSI (CLIMB)</span>
+            <span class="subm-val" id="pfd-vsi">+0.8 m/s</span>
+          </div>
+          <div class="pfd-submetric">
+            <span class="subm-lbl">G-FORCE</span>
+            <span class="subm-val" id="pfd-gforce">1.04 G</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 6: Neural Autopilot & Motor ESC Thermal FLIR Heatmap -->
+      <div class="cockpit-card spotlight-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 06 // NEURAL AUTOPILOT</span>
+            <h3>ESC Thermal FLIR Matrix</h3>
+          </div>
+          <span class="link-quality-badge">AI NOMINAL</span>
+        </div>
+
+        <!-- 4-Quadrant ESC Thermal Heatmap -->
+        <div class="esc-thermal-grid">
+          <div class="esc-tile">
+            <span class="esc-name">ESC 1 (FR)</span>
+            <span class="esc-temp" id="esc-1-temp">42.4°C</span>
+            <div class="temp-bar"><div class="temp-fill" style="width: 42%;"></div></div>
+          </div>
+          <div class="esc-tile">
+            <span class="esc-name">ESC 2 (FL)</span>
+            <span class="esc-temp" id="esc-2-temp">44.1°C</span>
+            <div class="temp-bar"><div class="temp-fill" style="width: 44%;"></div></div>
+          </div>
+          <div class="esc-tile">
+            <span class="esc-name">ESC 3 (RR)</span>
+            <span class="esc-temp" id="esc-3-temp">41.8°C</span>
+            <div class="temp-bar"><div class="temp-fill" style="width: 41%;"></div></div>
+          </div>
+          <div class="esc-tile">
+            <span class="esc-name">ESC 4 (RL)</span>
+            <span class="esc-temp" id="esc-4-temp">43.2°C</span>
+            <div class="temp-bar"><div class="temp-fill" style="width: 43%;"></div></div>
+          </div>
+        </div>
+
+        <!-- Neural Autopilot Diagnostics -->
+        <div class="neural-diag-list">
+          <div class="diag-node">
+            <span class="node-dot green"></span>
+            <span class="node-txt">Obstacle Avoidance: CLEAR (360° LiDAR)</span>
+          </div>
+          <div class="diag-node">
+            <span class="node-dot green"></span>
+            <span class="node-txt">Trajectory Optimization: 99.4% Efficiency</span>
+          </div>
+          <div class="diag-node">
+            <span class="node-dot cyan"></span>
+            <span class="node-txt">Wind Vector Compensator: 12 kts @ 042°</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODULE 07: Autonomous Tactical Waypoint Mission Tracker -->
+      <div class="cockpit-card spotlight-card waypoint-card">
+        <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+        <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+        <div class="card-header">
+          <div class="header-title">
+            <span class="sub-label">MODULE 07 // AUTONOMOUS FLIGHT PLAN</span>
+            <h3>Tactical Mission Waypoints</h3>
+          </div>
+          <span class="plan-status-pill">PATH NOMINAL</span>
+        </div>
+
+        <!-- Waypoint Progress Stepper -->
+        <div class="waypoint-stepper">
+          <div class="wp-step done">
+            <div class="wp-marker">✓</div>
+            <div class="wp-info">
+              <span class="wp-title">WP 01: BASE_LAUNCH</span>
+              <span class="wp-sub">Elev: 0m • Completed</span>
+            </div>
+          </div>
+          <div class="wp-step active">
+            <div class="wp-marker pulse-ring">02</div>
+            <div class="wp-info">
+              <span class="wp-title">WP 02: VECTOR_ALPHA</span>
+              <span class="wp-sub">Dist: <strong id="wp2-dist">140m</strong> • ETA: <strong id="wp2-eta">14s</strong></span>
+            </div>
+          </div>
+          <div class="wp-step">
+            <div class="wp-marker">03</div>
+            <div class="wp-info">
+              <span class="wp-title">WP 03: SECTOR_7_SURVEY</span>
+              <span class="wp-sub">Dist: 340m • Speed: 55 km/h</span>
+            </div>
+          </div>
+          <div class="wp-step">
+            <div class="wp-marker">04</div>
+            <div class="wp-info">
+              <span class="wp-title">WP 04: GEO_ANCHOR_RTH</span>
+              <span class="wp-sub">Dist: 520m • Home Beacon</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Autonomous Mission Progress Bar -->
+        <div class="mission-progress-box">
+          <div class="progress-labels">
+            <span>MISSION PROGRESS</span>
+            <span id="mission-progress-percent">48%</span>
+          </div>
+          <div class="mission-track-bar">
+            <div class="mission-fill-bar" id="mission-progress-bar" style="width: 48%;"></div>
+          </div>
+          <div class="geofence-alert-row">
+            <span class="geo-icon">🌐</span>
+            <span class="geo-text">GEO-FENCE: R=1000m CYLINDER [SECURE]</span>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         VIEW 2: BLACKBOX LOGGER TAB (SD CARD & FRAM DUAL-STORAGE ARCHITECTURE)
+         ==================================================================== -->
+    <div class="cockpit-view-pane" id="view-logger">
+      <!-- Top Aerospace Memory Core Banner -->
+      <div class="logger-banner-hud">
+        <div class="logger-banner-left">
+          <div class="logger-core-icon">
+            <span class="core-orbit r1"></span>
+            <span class="core-orbit r2"></span>
+            <span class="core-pulse-dot"></span>
+          </div>
+          <div class="logger-banner-titles">
+            <div class="banner-tag-row">
+              <span class="tag-cyber">MODULE 11 // BLACKBOX DATA ACQUISITION</span>
+              <span class="tag-live-pulse"><span class="pulse-dot"></span> DUAL BUS ACTIVE</span>
+            </div>
+            <h2 class="banner-title">Dual-Bus BlackBox Telemetry Logger &amp; Incident Vault</h2>
+            <p class="banner-desc">
+              Crash-proof dual memory architecture: high-capacity <strong>MicroSD (FAT32)</strong> records continuous 1000Hz normal flight telemetry streams, while zero-latency <strong>Aerospace FRAM (Non-Volatile)</strong> instantly freezes critical danger spikes and warnings under 150ns.
+            </p>
+          </div>
+        </div>
+
+        <div class="logger-banner-actions">
+          <a href="flow.html" class="btn-hazard-simulate" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;" title="Open Interactive Real-Time Data Flow Visualizer (Normal ➔ SD | Danger ➔ FRAM)">
+            <span class="btn-icon">⚡</span>
+            <span>Live Data Flow Router</span>
+          </a>
+          <button class="btn-hazard-simulate" id="btn-simulate-hazard" title="Simulate Real-Time Critical Incident Flashed to FRAM">
+            <span class="btn-icon">🚨</span>
+            <span>Simulate Danger Hazard</span>
+          </button>
+          <button class="btn-primary-action" id="btn-export-all-logs" title="Export Complete Telemetry Archive (ZIP)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <span>Export Archive</span>
+          </button>
+          <button class="btn-icon-hud" id="btn-flush-temp" title="Flush Temporary Cache & Re-index Registers">
+            <span>🧹</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dual Storage System Health Overview Cards -->
+      <div class="storage-architecture-grid">
+        <!-- STORAGE CARD A: SD CARD (Normal Continuous Telemetry) -->
+        <div class="storage-spec-card card-sd spotlight-card">
+          <div class="card-beam-glow"></div>
+          <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+          <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+          <div class="spec-card-header">
+            <div class="spec-title-group">
+              <div class="storage-icon-badge sd-icon">💾</div>
+              <div>
+                <span class="storage-sub">PRIMARY STREAM ARCHIVE</span>
+                <h3>MicroSD Card Storage (Normal Data)</h3>
+              </div>
+            </div>
+            <span class="storage-status-pill online"><span class="dot-online"></span> MOUNTED (FAT32)</span>
+          </div>
+
+          <div class="spec-metrics-grid">
+            <div class="spec-metric-item">
+              <span class="m-lbl">TOTAL CAPACITY</span>
+              <span class="m-val">64.0 GB (UHS-II)</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">AVAILABLE SPACE</span>
+              <span class="m-val cyan">48.2 GB Free (75%)</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">BUS PROTOCOL</span>
+              <span class="m-val">4-Bit SDIO @ 480 MB/s</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">NORMAL SESSIONS</span>
+              <span class="m-val emerald" id="sd-session-count">18 Normal Logs</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">LOGGED PACKETS</span>
+              <span class="m-val" id="sd-packet-count">14,892,400 Rows</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">PARTITION HEALTH</span>
+              <span class="m-val emerald">100% (Zero Bad Blocks)</span>
+            </div>
+          </div>
+
+          <!-- Capacity Bar -->
+          <div class="storage-usage-box">
+            <div class="usage-label-row">
+              <span>STORAGE UTILIZATION</span>
+              <span>15.8 GB / 64.0 GB (24.7%)</span>
+            </div>
+            <div class="usage-track">
+              <div class="usage-bar sd-fill" style="width: 24.7%;"></div>
+            </div>
+          </div>
+
+          <p class="storage-note">
+            Ingesting continuous multi-sensor stream (Dual ICM-42688P IMUs, BMP390 Baro, ZED-F9P RTK, 4x ESC RPM) at 1000 Hz. Click any file to view parsed rows, charts, or replay in 3D.
+          </p>
+        </div>
+
+        <!-- STORAGE CARD B: FRAM (Danger & Warning Incidents) -->
+        <div class="storage-spec-card card-fram spotlight-card">
+          <div class="card-beam-glow"></div>
+          <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+          <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+          <div class="spec-card-header">
+            <div class="spec-title-group">
+              <div class="storage-icon-badge fram-icon">⚡</div>
+              <div>
+                <span class="storage-sub">CRITICAL HAZARD VAULT</span>
+                <h3>Ferroelectric FRAM (Danger / Warning)</h3>
+              </div>
+            </div>
+            <span class="storage-status-pill armed-hazard"><span class="dot-hazard"></span> ARMED (ZERO-LATENCY)</span>
+          </div>
+
+          <div class="spec-metrics-grid">
+            <div class="spec-metric-item">
+              <span class="m-lbl">CHIP DENSITY</span>
+              <span class="m-val">8 MB Non-Volatile FRAM</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">WRITE SPEED</span>
+              <span class="m-val amber">150 ns Burst (Instant)</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">POWER-CUT SURVIVAL</span>
+              <span class="m-val emerald">100% Zero-Loss Immune</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">HAZARD SNAPSHOTS</span>
+              <span class="m-val crimson" id="fram-incident-count">6 Danger &amp; Warning</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">ENDURANCE CYCLES</span>
+              <span class="m-val">10^14 Read/Write</span>
+            </div>
+            <div class="spec-metric-item">
+              <span class="m-lbl">CRASH SHOCK RATING</span>
+              <span class="m-val purple">50,000 G Mil-Spec</span>
+            </div>
+          </div>
+
+          <!-- Capacity Bar -->
+          <div class="storage-usage-box">
+            <div class="usage-label-row">
+              <span>FRAM INCIDENT BUFFER</span>
+              <span id="fram-usage-text">384 KB / 8,192 KB (4.7%)</span>
+            </div>
+            <div class="usage-track">
+              <div class="usage-bar fram-fill" id="fram-usage-bar" style="width: 4.7%;"></div>
+            </div>
+          </div>
+
+          <p class="storage-note">
+            Autonomous non-volatile register freeze triggered when G-force exceeds 3.5G, ESC temp &gt; 80°C, voltage sag &lt; 13.5V, or geofence boundary &lt; 20m.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tactical Toolbar: Filters, Search & View Controls -->
+      <div class="logger-toolbar-card">
+        <div class="toolbar-left">
+          <!-- Filter Tabs -->
+          <div class="filter-tabs-track" id="log-filter-track">
+            <button class="filter-tab-btn active" data-filter="all">
+              <span>All Logs</span>
+              <span class="filter-badge" id="badge-count-all">24</span>
+            </button>
+            <button class="filter-tab-btn" data-filter="sd">
+              <span>💾 SD Card (Normal Data)</span>
+              <span class="filter-badge badge-sd" id="badge-count-sd">18</span>
+            </button>
+            <button class="filter-tab-btn" data-filter="fram">
+              <span>⚡ FRAM (Danger &amp; Warning)</span>
+              <span class="filter-badge badge-fram" id="badge-count-fram">6</span>
+            </button>
+            <button class="filter-tab-btn" data-filter="danger">
+              <span>🚨 Danger Only</span>
+              <span class="filter-badge badge-danger" id="badge-count-danger">3</span>
+            </button>
+            <button class="filter-tab-btn" data-filter="warning">
+              <span>⚠️ Warning Only</span>
+              <span class="filter-badge badge-warning" id="badge-count-warning">3</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-right">
+          <!-- Search Bar -->
+          <div class="search-input-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="log-search-input" class="search-field" placeholder="Search filename, sensor, peak G, trigger...">
+            <button class="search-clear-btn" id="btn-clear-search" style="display:none;">✕</button>
+          </div>
+
+          <!-- View Mode Toggle -->
+          <div class="view-mode-buttons">
+            <button class="v-mode-btn active" id="btn-view-split" title="Split Dual-Column View (SD on Left, FRAM on Right)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="8" height="18" rx="2"/><rect x="13" y="3" width="8" height="18" rx="2"/></svg>
+              <span>Split</span>
+            </button>
+            <button class="v-mode-btn" id="btn-view-grid" title="Unified Responsive Grid View">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              <span>Grid</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN DUAL-COLUMN LOG DIRECTORY CONTAINER -->
+      <div class="logger-directory-split" id="logger-directory-container">
+        <!-- COLUMN 1: SD CARD NORMAL FLIGHT LOGS -->
+        <div class="log-column-panel panel-sd" id="panel-sd-column">
+          <div class="column-panel-header">
+            <div class="col-title-wrap">
+              <span class="col-icon">💾</span>
+              <div>
+                <span class="col-sub">CONTINUOUS FLIGHT LOGS (FAT32)</span>
+                <h3>SD Card Storage (Normal Data)</h3>
+              </div>
+            </div>
+            <span class="col-count-badge" id="col-sd-badge">18 Sessions Available</span>
+          </div>
+
+          <div class="log-cards-list" id="list-sd-logs">
+            <!-- Dynamically populated SD Card logs -->
+          </div>
+        </div>
+
+        <!-- COLUMN 2: FRAM DANGER & WARNING HAZARD LOGS -->
+        <div class="log-column-panel panel-fram" id="panel-fram-column">
+          <div class="column-panel-header">
+            <div class="col-title-wrap">
+              <span class="col-icon">⚡</span>
+              <div>
+                <span class="col-sub">CRITICAL EVENT VAULT (NON-VOLATILE)</span>
+                <h3>FRAM Storage (Danger &amp; Warning Data)</h3>
+              </div>
+            </div>
+            <span class="col-count-badge hazard" id="col-fram-badge">6 Incidents Frozen</span>
+          </div>
+
+          <div class="log-cards-list" id="list-fram-logs">
+            <!-- Dynamically populated FRAM incident logs -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ====================================================================
+       AERO // BLACKBOX DATA INSPECTOR MODAL ("Click to see data inside")
+       ==================================================================== -->
+  <div class="blackbox-modal-overlay" id="inspector-modal-backdrop">
+    <div class="blackbox-modal-dialog" id="inspector-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-log-title">
+      <div class="modal-beam-glow"></div>
+      <div class="card-bracket tl"></div><div class="card-bracket tr"></div>
+      <div class="card-bracket bl"></div><div class="card-bracket br"></div>
+
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <div class="modal-tags-row">
+            <span class="modal-storage-pill" id="modal-storage-pill">💾 SD CARD (FAT32)</span>
+            <span class="modal-severity-pill" id="modal-severity-pill">✅ NOMINAL FLIGHT</span>
+            <span class="modal-address-chip" id="modal-address-chip">OFFSET: 0x00A1F0</span>
+          </div>
+          <h2 id="modal-log-title">FLIGHT_LOG_0042_SURVEY.BIN</h2>
+          <p class="modal-sub-desc" id="modal-log-desc">Routine Sector 7 Quad-LiDAR mapping mission telemetry stream.</p>
+        </div>
+
+        <div class="modal-header-actions">
+          <button class="btn-modal-close" id="btn-modal-close" title="Close Inspector (Esc)">✕</button>
+        </div>
+      </div>
+
+      <!-- Quick Metadata Chips Bar -->
+      <div class="modal-meta-strip">
+        <div class="meta-chip">
+          <span class="c-k">TIMESTAMP:</span>
+          <span class="c-v" id="modal-meta-time">2026-10-06 10:45:12 UTC</span>
+        </div>
+        <div class="meta-chip">
+          <span class="c-k">DURATION:</span>
+          <span class="c-v" id="modal-meta-duration">18m 42s</span>
+        </div>
+        <div class="meta-chip">
+          <span class="c-k">RECORDS:</span>
+          <span class="c-v" id="modal-meta-records">1,122,000 Pkts</span>
+        </div>
+        <div class="meta-chip">
+          <span class="c-k">SAMPLE RATE:</span>
+          <span class="c-v" id="modal-meta-odr">1,000 Hz</span>
+        </div>
+        <div class="meta-chip">
+          <span class="c-k">PEAK G-FORCE:</span>
+          <span class="c-v" id="modal-meta-g">1.04 G</span>
+        </div>
+        <div class="meta-chip">
+          <span class="c-k">CHECKSUM:</span>
+          <span class="c-v cyan" id="modal-meta-crc">CRC32: 0x98A4C2E1</span>
+        </div>
+      </div>
+
+      <!-- Modal Interior Tabs Navigation -->
+      <div class="modal-interior-tabs">
+        <button class="m-tab-btn active" data-modaltab="table">
+          <span class="m-icon">📊</span> Telemetry Data Table
+        </button>
+        <button class="m-tab-btn" data-modaltab="chart">
+          <span class="m-icon">📈</span> Waveform &amp; Event Graph
+        </button>
+        <button class="m-tab-btn" data-modaltab="hex">
+          <span class="m-icon">💾</span> Raw Hex &amp; FRAM Dump
+        </button>
+        <button class="m-tab-btn" data-modaltab="report">
+          <span class="m-icon">🛡️</span> Avionics Diagnosis &amp; Root Cause
+        </button>
+      </div>
+
+      <!-- Modal Body (4 Tab Panes) -->
+      <div class="modal-tab-content-area">
+        <!-- PANE 1: TELEMETRY TABLE -->
+        <div class="m-tab-pane active" id="pane-modal-table">
+          <div class="table-toolbar">
+            <div class="table-search-box">
+              <span class="search-mini-icon">🔍</span>
+              <input type="text" id="modal-table-search" placeholder="Filter rows by value, time, status...">
+            </div>
+            <div class="table-stats-info" id="modal-table-rowcount">
+              Showing 100 sample data packets (1,000 Hz stream)
+            </div>
+          </div>
+
+          <div class="modal-table-scroll-wrapper">
+            <table class="aero-telemetry-table" id="modal-telemetry-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>MET (s)</th>
+                  <th>Pitch (°)</th>
+                  <th>Roll (°)</th>
+                  <th>Yaw (°)</th>
+                  <th>Alt (m)</th>
+                  <th>Speed (km/h)</th>
+                  <th>G-Force</th>
+                  <th>Batt (V)</th>
+                  <th>Temp (°C)</th>
+                  <th>Motor RPMs</th>
+                  <th>Flags / Status</th>
+                </tr>
+              </thead>
+              <tbody id="modal-table-tbody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PANE 2: WAVEFORM CHART -->
+        <div class="m-tab-pane" id="pane-modal-chart">
+          <div class="chart-controls-strip">
+            <div class="chart-channels-selectors">
+              <span class="ch-lbl">SIGNAL CHANNELS:</span>
+              <label class="ch-toggle pitch"><input type="checkbox" checked id="chk-pitch"> <span>Pitch</span></label>
+              <label class="ch-toggle roll"><input type="checkbox" checked id="chk-roll"> <span>Roll</span></label>
+              <label class="ch-toggle gforce"><input type="checkbox" checked id="chk-gforce"> <span>G-Force</span></label>
+              <label class="ch-toggle alt"><input type="checkbox" checked id="chk-alt"> <span>Altitude</span></label>
+              <label class="ch-toggle temp"><input type="checkbox" checked id="chk-temp"> <span>Temperature</span></label>
+              <label class="ch-toggle volt"><input type="checkbox" checked id="chk-volt"> <span>Voltage</span></label>
+            </div>
+            <div class="chart-zoom-badge" id="modal-chart-anomaly-tag">
+              ⚡ INCIDENT TRIGGER HIGHLIGHTED
+            </div>
+          </div>
+
+          <div class="modal-chart-canvas-box">
+            <canvas id="inspector-waveform-canvas" width="940" height="340"></canvas>
+          </div>
+        </div>
+
+        <!-- PANE 3: RAW HEX DUMP -->
+        <div class="m-tab-pane" id="pane-modal-hex">
+          <div class="hex-toolbar">
+            <span class="hex-spec-tag">BINARY STRUCTURE // IEEE-754 TELEMETRY FRAMES • MAVLINK PACKET 0x14</span>
+            <button class="btn-copy-hex" id="btn-copy-hex">📋 Copy Raw Hex</button>
+          </div>
+          <div class="hex-dump-terminal">
+            <pre id="modal-hex-pre">0x00A1F0: 7F AA 14 88  00 00 48 40  1A B2 00 01  5C 04 00 00  |~.H@..\...|
+0x00A200: 3F 80 00 00  00 00 00 00  40 9A 3D 71  41 C4 00 00  |?.......@.=qA...|
+0x00A210: 42 28 00 00  40 40 00 00  42 2A 80 00  43 32 00 00  |B(..@@..B*..C2..|
+0x00A220: C3 F1 0D 0A  7F AA 14 89  00 00 48 44  1A B3 00 01  |....~.....HD....|</pre>
+          </div>
+        </div>
+
+        <!-- PANE 4: AVIONICS DIAGNOSIS & REPORT -->
+        <div class="m-tab-pane" id="pane-modal-report">
+          <div class="diagnosis-report-card" id="modal-report-content">
+            <!-- Dynamically populated root-cause and failure mode report -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer Action Bar -->
+      <div class="modal-footer">
+        <div class="footer-left-actions">
+          <button class="btn-modal-action replay" id="btn-modal-replay-3d" title="Load this log directly into the 3D Drone Replay scrubber">
+            <span class="btn-icon">▶</span>
+            <span>Replay in 3D Holo-Deck</span>
+          </button>
+          <button class="btn-modal-action secondary" id="btn-modal-export-csv" title="Download CSV Spreadsheet">
+            <span class="btn-icon">⬇</span>
+            <span>Export CSV</span>
+          </button>
+          <button class="btn-modal-action secondary" id="btn-modal-export-json" title="Download JSON Data">
+            <span class="btn-icon">{ }</span>
+            <span>Export JSON</span>
+          </button>
+        </div>
+
+        <div class="footer-right-actions">
+          <button class="btn-modal-close-main" id="btn-modal-close-bottom">Close Inspector</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
